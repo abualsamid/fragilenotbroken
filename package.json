@@ -1,0 +1,32 @@
+{
+  "name": "FragileNotBroken",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "firebase": "^3.2.1",
+    "react": "^15.3.0",
+    "react-dom": "^15.3.0",
+    "reactfire": "^1.0.0"
+  },
+  "devDependencies": {
+    "babel-core": "^6.13.2",
+    "babel-loader": "^6.2.4",
+    "babel-preset-es2015": "^6.13.2",
+    "babel-preset-react": "^6.11.1",
+    "copy-webpack-plugin": "^3.0.1",
+    "html-webpack-plugin": "^2.22.0",
+    "webpack": "^1.13.1",
+    "webpack-dev-server": "^1.14.1"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "watch": "NODE_ENV=development webpack-dev-server --progress --colors --port 2345 --watch",
+    "start": "NODE_ENV=development webpack-dev-server  --colors --port 2345 --watch",
+    "build": "NODE_ENV=production webpack --progress --colors",
+    "deploy": "firebase deploy"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
