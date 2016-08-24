@@ -6,8 +6,6 @@ var HtmlWebpackPlugin = require('html-webpack-plugin');
 const isProd = (process.env.NODE_ENV === 'production');
 
 var plugins = [
-  new webpack.optimize.OccurenceOrderPlugin(),
-  new webpack.optimize.DedupePlugin(),
   new webpack.ProvidePlugin({
     'fetch': 'imports?this=>global!exports?global.fetch!whatwg-fetch'
   }),
@@ -31,11 +29,17 @@ var plugins = [
   new CopyWebpackPlugin([
     { from:'vendor/css', to: 'css'},
     { from:'css', to: 'css'},
-    { from: 'img', to: 'img'}
+    { from: 'img', to: 'img'},
+    { from: 'favicon.ico'}
   ])
 ];
 
 if (isProd) {
+
+  plugins.push(new webpack.optimize.DedupePlugin())
+
+  plugins.push(new webpack.optimize.OccurenceOrderPlugin())
+
   plugins.push(new webpack.optimize.UglifyJsPlugin({ // Optimize the JavaScript...
       compress: {
         warnings: false // ...but do not show warnings in the console (there is a lot of them)
@@ -49,8 +53,9 @@ module.exports = {
     // The path should be an absolute path to your build destination.
     outputPath: path.join(__dirname, 'dist')
   },
+  devtool:  "cheap-eval-source-map",
   entry: ["webpack-dev-server/client?http://localhost:2345","./index.js"],
-  output: { path:path.join(__dirname, 'dist') , filename: 'bundle.js' },
+  output: { path:path.join(__dirname, 'dist') , filename: '[name].js?[hash]', publicPath: "/" },
   module: {
     loaders: [
       {
