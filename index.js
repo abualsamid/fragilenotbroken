@@ -10,6 +10,7 @@ import throttle from 'lodash/throttle';
 import App from './js/App';
 import AddBehavior from './js/components/addBehavior';
 import Students from './js/components/students'
+import Dashboard from './js/dashboard'
 import Root from './js/root';
 
 function log(...a) {
@@ -49,6 +50,7 @@ render((
     <Router history={history} >
       <Route path="/" component={App}>
         <IndexRoute component={Root} />
+        <Route path="/dashboard" component={Dashboard} />
         <Route path="/addBehavior" component={AddBehavior} />
         <Route path="/students" component={Students} />
       </Route>

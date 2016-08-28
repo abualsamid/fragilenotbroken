@@ -23,7 +23,7 @@ export default class Login extends React.Component {
       this.props.firebase.auth()
       .signInWithPopup(provider)
       .then( (result) => {
-        console.log('going to success: ', result )
+        log('going to success: ', result )
         this.props.onSuccess(result)
       })
     }

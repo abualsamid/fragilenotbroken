@@ -1,12 +1,7 @@
 import React from 'react';
 import { connect } from 'react-redux'
 import log from '../log'
-
-
-const redStyle="btn  btn-danger behavior"
-const greenStyle="btn  btn-success behavior"
-const redStyleSelected="btn  btn-danger behavior selected"
-const greenStyleSelected="btn  btn-success behavior selected"
+import behaviors, {redStyle, greenStyle, redStyleSelected, greenStyleSelected} from './behaviors'
 
 class Add extends React.Component {
   constructor(props) {
@@ -14,66 +9,148 @@ class Add extends React.Component {
     this._add = this._add.bind(this)
     this._selectMood=this._selectMood.bind(this)
     this.state= {
-      angryStyle: "",
-      happyStyle:"",
-      sadStyle:"",
-      buttons: [
+      moods: [
         {
-          caption: "Excited",
-          style: redStyle,
-          defaultStyle: redStyle,
+          caption: "n/a",
           selected: false,
           value: 0
         },
         {
-          caption: "Messy Eating",
-          style: redStyle,
-          defaultStyle: redStyle,
+          caption: "Angry",
           selected: false,
-          value: 1
+          value: 1,
+          src: 'img/angry.svg',
+          style:""
         },
         {
-          caption: "Calm",
-          style: greenStyle,
-          defaultStyle: greenStyle,
+          caption: "Happy",
           selected: false,
-          value: 2
+          value: 2,
+          src: 'img/happy.svg',
+          style:""
         },
         {
-          caption: "Proper Eating",
-          style: greenStyle,
-          defaultStyle: greenStyle,
+          caption: "Sad",
           selected: false,
-          value: 3
-        },
-      ]
+          value: 3,
+          src: 'img/crying.svg',
+          style:""
+        }
+      ],
+      behaviors: behaviors
     }
   }
   _add() {
     log('doing it.')
+    let mood = 0
+    let behavior = 0
+    let mediaURL = ""
+
+    this.state.moods.forEach(
+      (m) => {
+        if(m.selected) {
+          mood = m.value
+        }
+      }
+    )
+    this.state.behaviors.forEach(
+      (b) => {
+        if(b.selected) {
+          behavior=b.value
+        }
+      }
+    )
+
+    const newKey = firebase
+    .database()
+    .ref("people/" + this.props.student.key + "/timeline")
+    .push()
+    .key
+
+    let updates = {}
+    updates["people/" + this.props.student.key + "/timeline/" + newKey ] = {
+      date: firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
+      message: this.state.message,
+      mood: mood,
+      behavior: behavior,
+      mediaURL: ""
+    }
+
+    if (mood) {
+      updates["people/" + this.props.student.key + "/mood/" + newKey ] = {
+        date: firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
+        message: this.state.message,
+        mood: mood,
+        behavior: behavior,
+        mediaURL: ""
+      }
+
+    }
+    if (behavior) {
+      updates["people/" + this.props.student.key + "/behavior/" + newKey ] = {
+        date: firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
+        message: this.state.message,
+        mood: mood,
+        behavior: behavior,
+        mediaURL: ""
+      }
+    }
+    firebase
+    .database()
+    .ref()
+    .update(updates)
+
+    // this.props.addTimeLineEntry(this.state.message, mood, behavior, mediaURL)
+    this.setState({
+      message:"",
+      behaviors: this.state.behaviors.map(
+        (b) => {
+          b.style=b.defaultStyle
+          b.selected=false
+          return b
+        }
+      ),
+      moods: this.state.moods.map(
+        (b) => (
+          {
+            ...b,
+            style: b.defaultStyle,
+            selected: false
+          }
+        )
+
+      ),
+
+
+    })
   }
   _selectMood(w) {
-    switch(w) {
-      case 0:
-        this.setState({angryStyle:this.state.angryStyle=="selected"?"":"selected", happyStyle:"", sadStyle: ""})
-        break
-      case 1:
-        this.setState({angryStyle:"", happyStyle:this.state.happyStyle=="selected"?"":"selected", sadStyle: ""})
-        break;
-      case 2:
-        this.setState({angryStyle:"", happyStyle:"", sadStyle: this.state.sadStyle=="selected"?"":"selected"})
-        break;
-    }
+
+    this.setState( {
+      moods: this.state.moods.map(
+        (b) => {
+          if (w==b.value) {
+            b.selected=!b.selected
+            b.style = b.selected ? " selected btn-primary " : ""
+          } else {
+            b.style=""
+            b.selected = false
+          }
+          return b
+        }
+      )
+    })
   }
   _selectBehavior(w) {
-      let buttons = this.state.buttons
       this.setState({
-        buttons: this.state.buttons.map(
+        behaviors: this.state.behaviors.map(
           (b) => {
             if (w==b.value) {
-              b.style= b.style==b.defaultStyle? b.defaultStyle + " selected " : b.defaultStyle
+              b.selected = !b.selected
+              b.style= b.selected ? b.defaultStyle + " selected " : b.defaultStyle
             } else {
               b.style = b.defaultStyle
+              b.selected=false
             }
             return b
           }
@@ -90,29 +167,64 @@ class Add extends React.Component {
             <label>
               what is happening?
             </label>
-            <textarea className="form-control"></textarea>
+            <textarea className="form-control"
+              value={this.state.message}
+              onChange={(e) => this.setState({message : e.target.value}) }
+            ></textarea>
           </div>
           <div className="form-group">
             <label>Mood</label>
             <div>
-              <img src='img/angry.svg' alt='Angry' className={this.state.angryStyle} title='Angry'
-                style={{width:"25px", marginRight:"1em", marginLeft:"1em"}} onClick={ (e)=>this._selectMood(0) } />
-              &nbsp;
-              <img src='img/happy.svg' alt='Happy'  className={this.state.happyStyle} title='Happy'
-                style={{width:"25px", marginRight:"1em", marginLeft:"1em"}}  onClick={ (e)=>this._selectMood(1) }  />
-              &nbsp;
-              <img src='img/crying.svg' alt='Sad'  className={this.state.sadStyle} title='Sad'
-                style={{width:"25px", marginRight:"1em", marginLeft:"1em"}}  onClick={ (e)=>this._selectMood(2) } />
+              {
+                this.state.moods.map(
+                  (b,i) => {
+                    if (b.value) {
+                        return (
+                          <button key={i}
+                                  className={ "btn " + b.style }
+                                  onClick={ (e)=>this._selectMood(b.value) }  >
+
+                          <img key={i} src={b.src} alt={b.caption} title={b.caption}
+                          style={{width:"25px", marginRight:"1em", marginLeft:"1em"}}
+                          />
+                          { b.caption }
+                          { }
+                          &nbsp;
+                          {
+                            b.selected &&
+                                <i className="fa fa-check" aria-hidden="true"></i>
+                          }
+                          </button>
+                        )
+                    }
+                  }
+
+
+                )
+              }
             </div>
+
           </div>
           <div className="form-group">
             <label>Behavior</label>
             <p>
-              { this.state.buttons.map(
-                (b,i) => <button key={i} className={b.style}
-                  role="button" onClick={ (e)=>this._selectBehavior(b.value)}>
-                    {b.caption}
-                  </button>
+              { this.state.behaviors.map(
+                (b,i) => {
+                  if (b.value) {
+                    return (
+                      <button key={i} className={b.style}
+                        role="button" onClick={ (e)=>this._selectBehavior(b.value)}>
+                          {b.caption }
+                          { }
+                          &nbsp;
+                          {
+                            b.selected &&
+                                <i className="fa fa-check" aria-hidden="true"></i>
+                          }
+                      </button>
+                    )
+                  }
+                }
               )}
             </p>
           </div>
@@ -141,5 +253,13 @@ export default connect(
     }
   },
   {
+    addTimeLineEntry: (message, mood, behavior, mediaURL) => ({
+      type:"addTimeLineEntry",
+      message: message,
+      mood: mood,
+      behavior: behavior,
+      mediaURL: mediaURL,
+    }),
+
   }
 )(Add)

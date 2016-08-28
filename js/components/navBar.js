@@ -35,6 +35,7 @@ class Nav extends React.Component {
           <div id="navbar" className="navbar-collapse collapse">
             <ul className="nav navbar-nav">
               <li className="active"><IndexLink to="/" activeClassName="active">Home</IndexLink></li>
+              <li><Link to="/dashboard">Dashboard</Link></li>
               <li className="dropdown" >
                 <a href="#" className="dropdown-toggle" data-toggle="dropdown" role="button">
                   Add <span className="caret"></span>

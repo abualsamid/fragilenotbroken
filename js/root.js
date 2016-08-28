@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import Login from './async';
 import Navbar from './components/navBar'
 import Add from './components/add'
-
+import TimeLine from './components/timeLine'
 
 Date.daysBetween = function( date1, date2 ) {
   //Get 1 day in milliseconds
@@ -48,6 +48,7 @@ class Root extends React.Component {
 
   }
 
+
   _toReactDate(d) {
     function pad(i) {
       if (i<10) {
@@ -63,6 +64,7 @@ class Root extends React.Component {
     return <div>
 
       <Add />
+      <TimeLine />
     </div>
   }
 }
