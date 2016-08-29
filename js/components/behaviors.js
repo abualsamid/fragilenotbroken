@@ -15,7 +15,8 @@ let behaviors =  [
           defaultStyle: redStyle,
           txtStyle: "bg-danger",
           selected: false,
-          value: 1
+          value: 1,
+          category: "red"
         },
         {
           caption: "Messy Eating",
@@ -23,7 +24,8 @@ let behaviors =  [
           defaultStyle: redStyle,
           txtStyle: "bg-danger",
           selected: false,
-          value: 2
+          value: 2,
+          category: "red"
         },
         {
           caption: "Calm",
@@ -31,7 +33,9 @@ let behaviors =  [
           defaultStyle: greenStyle,
           txtStyle: "bg-success",
           selected: false,
-          value: 3
+          value: 3,
+          category: "green"
+
         },
         {
           caption: "Proper Eating",
@@ -39,7 +43,9 @@ let behaviors =  [
           defaultStyle: greenStyle,
           txtStyle: "bg-success",
           selected: false,
-          value: 4
+          value: 4,
+          category: "green"
+
         }
       ]
 

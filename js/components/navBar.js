@@ -34,18 +34,20 @@ class Nav extends React.Component {
           </div>
           <div id="navbar" className="navbar-collapse collapse">
             <ul className="nav navbar-nav">
-              <li className="active"><IndexLink to="/" activeClassName="active">Home</IndexLink></li>
-              <li><Link to="/dashboard">Dashboard</Link></li>
+              <li className="active">
+                <IndexLink to="/" activeClassName="active" className="nav-link">Home</IndexLink>
+              </li>
+              <li><Link to="/dashboard" activeClassName="active" className="nav-link">Dashboard</Link></li>
               <li className="dropdown" >
-                <a href="#" className="dropdown-toggle" data-toggle="dropdown" role="button">
+                <a href="#" className="dropdown-toggle" data-toggle="dropdown" role="button" >
                   Add <span className="caret"></span>
                 </a>
                 <ul className="dropdown-menu">
-                  <li><Link to="/addBehavior">Behavior</Link></li>
+                  <li><Link to="/addBehavior" className="nav-link" activeClassName="active">Behavior</Link></li>
                   <li><a href="#">Event</a></li>
                 </ul>
               </li>
-              <li><a href="#">Videos</a></li>
+              <li><Link to="/videos" className="nav-link" activeClassName="active">Videos</Link></li>
               <li className="dropdown">
                 <a href="#" className="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">People <span className="caret"></span></a>
                 <ul className="dropdown-menu">

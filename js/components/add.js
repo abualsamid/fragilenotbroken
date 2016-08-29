@@ -2,6 +2,7 @@ import React from 'react';
 import { connect } from 'react-redux'
 import log from '../log'
 import behaviors, {redStyle, greenStyle, redStyleSelected, greenStyleSelected} from './behaviors'
+import {inc, incAll, incYear, incMonth, incDate} from '../utils/fb'
 
 class Add extends React.Component {
   constructor(props) {
@@ -45,6 +46,7 @@ class Add extends React.Component {
     let mood = 0
     let behavior = 0
     let mediaURL = ""
+    let category = ""
 
     this.state.moods.forEach(
       (m) => {
@@ -57,6 +59,7 @@ class Add extends React.Component {
       (b) => {
         if(b.selected) {
           behavior=b.value
+          category = b.category
         }
       }
     )
@@ -85,6 +88,14 @@ class Add extends React.Component {
         mediaURL: ""
       }
 
+      updates["people/" + this.props.student.key + "/mood/" + newKey ] = {
+        date: firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
+        message: this.state.message,
+        mood: mood,
+        behavior: behavior,
+        mediaURL: ""
+      }
+
     }
     if (behavior) {
       updates["people/" + this.props.student.key + "/behavior/" + newKey ] = {
@@ -100,6 +111,27 @@ class Add extends React.Component {
     .ref()
     .update(updates)
 
+    let d = new Date()
+
+    if (mood) {
+      incAll("/people/" + this.props.student.key + "/stats/mood", mood.toString())
+      incYear("/people/" + this.props.student.key + "/stats/mood", mood.toString())
+      incMonth("/people/" + this.props.student.key + "/stats/mood", mood.toString())
+      incDate("/people/" + this.props.student.key + "/stats/mood", mood.toString())
+    }
+
+    if (behavior) {
+      incAll("/people/" + this.props.student.key + "/stats/behavior", behavior.toString())
+      incYear("/people/" + this.props.student.key + "/stats/behavior", behavior.toString())
+      incMonth("/people/" + this.props.student.key + "/stats/behavior", behavior.toString())
+      incDate("/people/" + this.props.student.key + "/stats/behavior", behavior.toString())
+
+      incAll("/people/" + this.props.student.key + "/stats/behaviors", category)
+      incYear("/people/" + this.props.student.key + "/stats/behaviors", category)
+      incMonth("/people/" + this.props.student.key + "/stats/behaviors", category)
+      incDate("/people/" + this.props.student.key + "/stats/behaviors", category)
+
+    }
     // this.props.addTimeLineEntry(this.state.message, mood, behavior, mediaURL)
     this.setState({
       message:"",
