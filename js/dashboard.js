@@ -2,7 +2,6 @@ import React from 'react';
 import { connect } from 'react-redux'
 import log from './log'
 
-
 class D extends React.Component {
   constructor(props) {
     super(props)
@@ -11,6 +10,14 @@ class D extends React.Component {
     this.state = {
       green: 0,
       red: 0
+    }
+    require.ensure([], (require) => {
+      var log = require('./log')
+    })
+    try {
+      log('inside Dashboard constructor')
+    } catch(x) {
+      console.error(x)
     }
   }
 
@@ -21,25 +28,34 @@ class D extends React.Component {
       this.drawChart()
 
     } else {
-      console.log('hi')
+      log('hi')
       setTimeout(this.do, 250)
     }
   }
 
   componentWillMount() {
     const self = this
-    firebase
-    .database()
-    .ref("/people/" + this.props.student.key + "/stats/behaviors")
-    .on("value",
-      value => {
-        let cats = value.val()
-        self.setState({
-          green: cats["green"] ? cats["green"]["all"] : 0,
-          red: cats["red"] ? cats["red"]["all"] : 0,
-        })
+    if(this.props && this.props.viewPerson && this.props.viewPersonId) {
+      try {
+        firebase
+        .database()
+        .ref("/people/" + this.props.viewPersonId + "/stats/behaviors")
+        .on("value",
+          value => {
+            let cats = value.val()
+            log('categories are ', cats )
+            self.setState({
+              green: cats["green"] ? cats["green"]["all"] : 0,
+              red: cats["red"] ? cats["red"]["all"] : 0,
+            })
+          }
+        )
+      } catch(x) {
+        console.log(x)
       }
-    )
+    }
+
+
   }
   componentDidMount() {
     const self = this
@@ -47,7 +63,7 @@ class D extends React.Component {
     try {
       setTimeout(self.do, 250)
     } catch(x) {
-      console.log(x)
+      log(x)
     }
   }
 
@@ -95,16 +111,9 @@ export default connect(
   (state, ownProps) => {
     return {
       user: state.auth.user,
-      student: state.students.student
+      viewPersonId: state.auth.viewPersonId,
+      viewPerson: state.auth.viewPerson
     }
-  },
-  {
-    onLogout: () => ({
-      type:"logout", user: null, isAuthenticated: false, credentials: null
-    }),
-    selectStudent: (student) => ({
-      type:"selectStudent", student: student
-    }),
-
   }
+
 )(D)

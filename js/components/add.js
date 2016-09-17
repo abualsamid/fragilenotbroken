@@ -9,6 +9,8 @@ class Add extends React.Component {
     super(props)
     this._add = this._add.bind(this)
     this._selectMood=this._selectMood.bind(this)
+    this._previewFile=this._previewFile.bind(this)
+    this._pushUpdates=this._pushUpdates.bind(this)
     this.state= {
       moods: [
         {
@@ -41,12 +43,67 @@ class Add extends React.Component {
       behaviors: behaviors
     }
   }
+  _previewFile() {
+    const self = this
+    try {
+      var reader = new FileReader();
+      reader.onload = function (e) {
+          // get loaded data and render thumbnail.
+          self.preview.src = e.target.result;
+      };
+
+      // read the image file as a data URL.
+      reader.readAsDataURL(self.file.files[0]);
+    } catch(x) {console.log('previewFile: ', x)}
+
+  }
+  _pushUpdates(key, newKey, message, mood, behavior, mediaURL) {
+
+    if (message || mood || behavior || mediaURL ) {
+      let updates = {}
+      const self = this
+      updates["people/" + key + "/timeline/" + newKey ] = {
+        date: firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
+        message: message || "",
+        mood: mood,
+        behavior: behavior,
+        mediaURL: mediaURL || ""
+      }
+
+      if (mood) {
+        updates["people/" + key + "/mood/" + newKey ] = {
+          date: firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
+          message: message || "",
+          mood: mood,
+          behavior: behavior,
+          mediaURL: mediaURL ||""
+        }
+      }
+      if (behavior) {
+        updates["people/" + key + "/behavior/" + newKey ] = {
+          date: firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
+          message: message || "",
+          mood: mood,
+          behavior: behavior,
+          mediaURL: mediaURL || ""
+        }
+      }
+      firebase
+      .database()
+      .ref()
+      .update(updates)
+
+    }
+
+  }
   _add() {
+    const self = this
     log('doing it.')
     let mood = 0
     let behavior = 0
     let mediaURL = ""
     let category = ""
+    const message = this.state.message||""
 
     this.state.moods.forEach(
       (m) => {
@@ -66,70 +123,62 @@ class Add extends React.Component {
 
     const newKey = firebase
     .database()
-    .ref("people/" + this.props.student.key + "/timeline")
+    .ref("people/" + this.props.viewPersonId + "/timeline")
     .push()
     .key
 
-    let updates = {}
-    updates["people/" + this.props.student.key + "/timeline/" + newKey ] = {
-      date: firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
-      message: this.state.message,
-      mood: mood,
-      behavior: behavior,
-      mediaURL: ""
+    try {
+      if (this.file && this.file.files && this.file.files.length) {
+        var file = this.file.files[0];
+        var metadata = {
+          'contentType': file.type
+        };
+        var storageRef = firebase.storage().ref();
+
+        storageRef
+          .child('timeline-images/' + newKey + "/" + file.name)
+          .put(file, metadata)
+          .then( (snapshot) => {
+            console.log('Uploaded', snapshot.totalBytes, 'bytes.');
+            console.log(snapshot.metadata);
+            var url = snapshot.metadata.downloadURLs[0];
+            self._pushUpdates(self.props.viewPersonId, newKey,message || "" , mood, behavior, url)
+            console.log('File available at', url);
+          })
+          .catch(function(error) {
+            // [START onfailure]
+            console.error('Upload failed:', error);
+            // [END onfailure]
+          });
+      } else {
+        self._pushUpdates(this.props.viewPersonId, newKey,message || "" , mood, behavior, "")
+
+      }
+    } catch(x) {
+      console.log(x)
     }
 
-    if (mood) {
-      updates["people/" + this.props.student.key + "/mood/" + newKey ] = {
-        date: firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
-        message: this.state.message,
-        mood: mood,
-        behavior: behavior,
-        mediaURL: ""
-      }
 
-      updates["people/" + this.props.student.key + "/mood/" + newKey ] = {
-        date: firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
-        message: this.state.message,
-        mood: mood,
-        behavior: behavior,
-        mediaURL: ""
-      }
-
-    }
-    if (behavior) {
-      updates["people/" + this.props.student.key + "/behavior/" + newKey ] = {
-        date: firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
-        message: this.state.message,
-        mood: mood,
-        behavior: behavior,
-        mediaURL: ""
-      }
-    }
-    firebase
-    .database()
-    .ref()
-    .update(updates)
 
     let d = new Date()
 
     if (mood) {
-      incAll("/people/" + this.props.student.key + "/stats/mood", mood.toString())
-      incYear("/people/" + this.props.student.key + "/stats/mood", mood.toString())
-      incMonth("/people/" + this.props.student.key + "/stats/mood", mood.toString())
-      incDate("/people/" + this.props.student.key + "/stats/mood", mood.toString())
+      incAll("/people/" + this.props.viewPersonId + "/stats/mood", mood.toString())
+      incYear("/people/" + this.props.viewPersonId + "/stats/mood", mood.toString())
+      incMonth("/people/" + this.props.viewPersonId + "/stats/mood", mood.toString())
+      incDate("/people/" + this.props.viewPersonId + "/stats/mood", mood.toString())
     }
 
     if (behavior) {
-      incAll("/people/" + this.props.student.key + "/stats/behavior", behavior.toString())
-      incYear("/people/" + this.props.student.key + "/stats/behavior", behavior.toString())
-      incMonth("/people/" + this.props.student.key + "/stats/behavior", behavior.toString())
-      incDate("/people/" + this.props.student.key + "/stats/behavior", behavior.toString())
+      incAll("/people/" + this.props.viewPersonId + "/stats/behavior", behavior.toString())
+      incYear("/people/" + this.props.viewPersonId + "/stats/behavior", behavior.toString())
+      incMonth("/people/" + this.props.viewPersonId + "/stats/behavior", behavior.toString())
+      incDate("/people/" + this.props.viewPersonId + "/stats/behavior", behavior.toString())
 
-      incAll("/people/" + this.props.student.key + "/stats/behaviors", category)
-      incYear("/people/" + this.props.student.key + "/stats/behaviors", category)
-      incMonth("/people/" + this.props.student.key + "/stats/behaviors", category)
-      incDate("/people/" + this.props.student.key + "/stats/behaviors", category)
+      incAll("/people/" + this.props.viewPersonId + "/stats/behaviors", category)
+      incYear("/people/" + this.props.viewPersonId + "/stats/behaviors", category)
+      incMonth("/people/" + this.props.viewPersonId + "/stats/behaviors", category)
+      incDate("/people/" + this.props.viewPersonId + "/stats/behaviors", category)
 
     }
     // this.props.addTimeLineEntry(this.state.message, mood, behavior, mediaURL)
@@ -155,6 +204,8 @@ class Add extends React.Component {
 
 
     })
+    self.preview.src=""
+
   }
   _selectMood(w) {
 
@@ -206,32 +257,22 @@ class Add extends React.Component {
           </div>
           <div className="form-group">
             <label>Mood</label>
-            <div>
+            <div className="btn-toolbar">
               {
                 this.state.moods.map(
                   (b,i) => {
                     if (b.value) {
                         return (
-                          <button key={i}
-                                  className={ "btn " + b.style }
-                                  onClick={ (e)=>this._selectMood(b.value) }  >
-
-                          <img key={i} src={b.src} alt={b.caption} title={b.caption}
-                          style={{width:"25px", marginRight:"1em", marginLeft:"1em"}}
-                          />
-                          { b.caption }
-                          { }
-                          &nbsp;
-                          {
-                            b.selected &&
-                                <i className="fa fa-check" aria-hidden="true"></i>
-                          }
-                          </button>
+                          <div className="btn-group" key={i}>
+                            <img key={i} src={b.src} alt={b.caption} title={b.caption}
+                            style={{width:"2em"}}
+                            className={  b.style }
+                            onClick={ (e)=>this._selectMood(b.value) }
+                            />
+                          </div>
                         )
                     }
                   }
-
-
                 )
               }
             </div>
@@ -239,36 +280,45 @@ class Add extends React.Component {
           </div>
           <div className="form-group">
             <label>Behavior</label>
-            <p>
+            <div className="btn-toolbar">
+
               { this.state.behaviors.map(
                 (b,i) => {
                   if (b.value) {
                     return (
-                      <button key={i} className={b.style}
-                        role="button" onClick={ (e)=>this._selectBehavior(b.value)}>
-                          {b.caption }
-                          { }
-                          &nbsp;
-                          {
-                            b.selected &&
-                                <i className="fa fa-check" aria-hidden="true"></i>
-                          }
-                      </button>
+                      <div className="btn-group" key={i}>
+                        <button key={i} className={b.style}
+                          role="button" onClick={ (e)=>this._selectBehavior(b.value)}>
+                            {b.caption }
+                            { }
+                            &nbsp;
+                            {
+                              b.selected &&
+                                  <i className="fa fa-check" aria-hidden="true"></i>
+                            }
+                        </button>
+                      </div>
+
                     )
                   }
                 }
               )}
-            </p>
+            </div>
           </div>
           <div className="form-group">
             <label>photo/video</label>
             <label htmlFor="upload" className="form-control">
               <i className="fa fa-camera" aria-hidden="true"></i>
-              <input type="file"  id="upload" style={{display:"none"}} />
+              <input type="file"  id="upload" style={{display:"none"}}
+                onChange={this._previewFile}
+                ref={e=>this.file = e}/>
             </label>
           </div>
+          <div className="form-group">
+            <img  style={{width:"200px"}} ref={(e)=>{this.preview = e}} />
+          </div>
           <div>
-            <button className="pull-right btn btn-primary" onClick={this._add}>Post</button>
+            <button className="btn-block btn btn-primary" onClick={this._add}>Post</button>
             <br/>
           </div>
         </form>
@@ -281,7 +331,7 @@ export default connect(
     log('connecting state ', state)
     return {
       user: state.auth.user,
-      student: state.students.student
+      viewPersonId: state.auth.viewPersonId
     }
   },
   {

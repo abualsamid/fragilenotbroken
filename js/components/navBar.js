@@ -17,17 +17,16 @@ class Nav extends React.Component {
               <span className="sr-only">Toggle navigation</span>
               <span className="icon-bar"></span>
               <span className="icon-bar"></span>
-              <span className="icon-bar"></span>
             </button>
             <a  href="/">
             {
-              self.props.student &&
-                <img src={self.props.student.val.picURL} alt={self.props.student.val.name}
-                  title={self.props.student.val.name}
+              self.props.viewPersonId &&
+                <img src={self.props.viewPerson.picURL || self.props.viewPerson.photoURL || "/img/generic.jpg"} alt={self.props.viewPerson.name}
+                  title={self.props.viewPerson.name}
                   style={{height:"50px"}} />
             }
             {
-              !self.props.student &&
+              !self.props.viewPersonId &&
                 <img src='img/x.png' alt='fragile not broken' title='fragile not broken'/>
             }
             </a>
@@ -37,28 +36,8 @@ class Nav extends React.Component {
               <li className="active">
                 <IndexLink to="/" activeClassName="active" className="nav-link">Home</IndexLink>
               </li>
-              <li><Link to="/dashboard" activeClassName="active" className="nav-link">Dashboard</Link></li>
-              <li className="dropdown" >
-                <a href="#" className="dropdown-toggle" data-toggle="dropdown" role="button" >
-                  Add <span className="caret"></span>
-                </a>
-                <ul className="dropdown-menu">
-                  <li><Link to="/addBehavior" className="nav-link" activeClassName="active">Behavior</Link></li>
-                  <li><a href="#">Event</a></li>
-                </ul>
-              </li>
-              <li><Link to="/videos" className="nav-link" activeClassName="active">Videos</Link></li>
-              <li className="dropdown">
-                <a href="#" className="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">People <span className="caret"></span></a>
-                <ul className="dropdown-menu">
-                  <li><Link to="/students">Students</Link></li>
-                  <li><a href="#">Test Student</a></li>
-                  <li><a href="#">Bassel</a></li>
-                  <li role="separator" className="divider"></li>
-                  <li className="dropdown-header">Nav header</li>
-                  <li><a href="#">Separated link</a></li>
-                </ul>
-              </li>
+
+
             </ul>
             <ul className="nav navbar-nav navbar-right">
 
@@ -86,8 +65,6 @@ class Nav extends React.Component {
                     <i className="fa fa-sign-out" aria-hidden="true" alt='logout' title='logout'> </i>
                   </a>
               </li>
-
-
             </ul>
           </div>
         </div>
@@ -102,7 +79,8 @@ export default connect(
   (state, ownProps) => ({
       user: state.auth.user,
       isAuthenticated: state.auth.user != null,
-      student: state.students.student,
+      viewPersonId: state.auth.viewPersonId,
+      viewPerson: state.auth.viewPerson ,
       isSuperAdmin: state.auth.isSuperAdmin
     })
 

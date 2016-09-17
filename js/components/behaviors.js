@@ -13,7 +13,7 @@ let behaviors =  [
           caption: "Excited",
           style: redStyle,
           defaultStyle: redStyle,
-          txtStyle: "bg-danger",
+          txtStyle: "btn btn-danger",
           selected: false,
           value: 1,
           category: "red"
@@ -22,7 +22,7 @@ let behaviors =  [
           caption: "Messy Eating",
           style: redStyle,
           defaultStyle: redStyle,
-          txtStyle: "bg-danger",
+          txtStyle: "btn btn-danger",
           selected: false,
           value: 2,
           category: "red"
@@ -31,7 +31,7 @@ let behaviors =  [
           caption: "Calm",
           style: greenStyle,
           defaultStyle: greenStyle,
-          txtStyle: "bg-success",
+          txtStyle: "btn btn-success",
           selected: false,
           value: 3,
           category: "green"
@@ -41,7 +41,7 @@ let behaviors =  [
           caption: "Proper Eating",
           style: greenStyle,
           defaultStyle: greenStyle,
-          txtStyle: "bg-success",
+          txtStyle: "btn btn-success",
           selected: false,
           value: 4,
           category: "green"

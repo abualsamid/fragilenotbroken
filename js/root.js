@@ -45,7 +45,7 @@ class Root extends React.Component {
 
     this.state = {
     }
-
+    console.log('in root component')
   }
 
 
@@ -61,11 +61,12 @@ class Root extends React.Component {
 
   render() {
     const self = this
-    return <div>
-
-      <Add />
-      <TimeLine />
-    </div>
+    return (
+      <div>
+        <Add />
+        <TimeLine />
+      </div>
+    )
   }
 }
 
@@ -73,7 +74,7 @@ export default connect(
   (state, ownProps) => {
     return {
       user: state.auth.user,
-      student: state.students.student
+      student: state.auth.viewPersonId
     }
   },
   (dispatch) => {

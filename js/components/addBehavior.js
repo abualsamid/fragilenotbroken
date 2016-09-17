@@ -49,7 +49,7 @@ export default connect(
     console.log('connecting state ', state)
     return {
       user: state.auth.user,
-      student: state.students.student
+      viewPersonId: state.auth.viewPersonId
     }
   },
   {

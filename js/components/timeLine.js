@@ -11,19 +11,27 @@ class TimeLine extends React.Component {
   }
   componentWillMount() {
     const self = this
-    firebase
-    .database()
-    .ref("people/" + this.props.student.key + "/timeline")
-    .on("value",
-      (snapshot) => {
-        let all = []
-        for(var key in snapshot.val()) {
-          all.unshift(snapshot.val()[key])
-        }
-        console.log('all ', all )
-        self.setState({timeline: all})
+    try {
+      if(self.props && self.props.viewPersonId ) {
+        console.log('retrieving time line for ', self.props.viewPersonId)
+        firebase
+        .database()
+        .ref("people/" + this.props.viewPersonId + "/timeline")
+        .on("value",
+          (snapshot) => {
+            let all = []
+            for(var key in snapshot.val()) {
+              all.unshift(snapshot.val()[key])
+            }
+            self.setState({timeline: all})
+          }
+        )
       }
-    )
+    } catch(x) {
+      console.log(x)
+    }
+
+
   }
   render() {
     function mood(m) {
@@ -48,7 +56,7 @@ class TimeLine extends React.Component {
           return behaviors.reduce(
             (prev, current, index, array) => current.value==b
               ?
-              <strong className={current.txtStyle} style={{paddingRight:"1em", paddingLeft: "1em"}} >{current.caption}</strong>
+              <span className={current.txtStyle} style={{paddingRight:"1em", paddingLeft: "1em"}} >{current.caption}</span>
               :
               prev
             ,
@@ -62,22 +70,32 @@ class TimeLine extends React.Component {
           this.state.timeline.map(
             (e, i ) => (
               <div key={i} style={{padding:"2em",marginBottom:"1em", marginTop:"1em", border:"1px solid gray", backgroundColor: i%2?"white":"#eee" }}>
-                <div key={i}><br/></div>
                 <div key={e.date}>
-                  {
-                    (new Date(e.date)).toString()
-                  }
+                  <div>
+                    <span style={{fontSize:"small", fontWeight:"light"}}>
+                      {
+                        (new Date(e.date)).toString()
+                      }
+                    </span>
 
+                  </div>
                   <br/>
+                  <div>
+                    {e.message}
+
+                  </div>
+                  <br/>
+                  {
+                    e.mediaURL &&
+                    <div>
+                      <img src={e.mediaURL} style={{maxWidth: "50%"}} />
+                    </div>
+                  }
                   <br/>
                   {mood(e.mood)}
                   {behavior(e.behavior)}
+                  <br/>
 
-                  <br/>
-                  <br/>
-                  {e.message}
-                  <br/>
-                  <br/>
                 </div>
               </div>
             )
@@ -92,19 +110,10 @@ class TimeLine extends React.Component {
 
 export default connect(
   (state, ownProps) => {
-    console.log('connecting time state ', state)
     return {
       user: state.auth.user,
-      student: state.students.student
+      viewPersonId: state.auth.viewPersonId,
+      viewPerson: state.auth.viewPerson
     }
-  },
-  {
-    onLogout: () => ({
-      type:"logout", user: null, isAuthenticated: false, credentials: null
-    }),
-    selectStudent: (student) => ({
-      type:"selectStudent", student: student
-    }),
-
   }
 )(TimeLine)

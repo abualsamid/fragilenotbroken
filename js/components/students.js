@@ -1,6 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { connect } from 'react-redux'
+import { browserHistory } from 'react-router'
+import ReactSwipe from 'react-swipe';
 
 var database = firebase.database();
 
@@ -8,14 +10,58 @@ class Students extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
-      students: []
+      students: [],
+      setupInvite: "",
+      alert:"",
+      inviteFeedback:""
     }
-    this._addStudent=this._addStudent.bind(this)
+    this._addPerson=this._addPerson.bind(this)
+    this._acceptInvite=this._acceptInvite.bind(this)
+
     this._select = this._select.bind(this)
     this._selectPic = this._selectPic.bind(this)
+    this._invite = this._invite.bind(this)
+    this._calcInviteKey=this._calcInviteKey.bind(this)
     this.picURL = ""
+
+    this.swipeOptions = {
+      continuous: true,
+      callback(index,element) {
+       console.log('slide changed: ', index);
+      },
+      transitionEnd(index,element) {
+        console.log('slide changed: ', index);
+      }
+    }
   }
-  _addStudent() {
+
+  _acceptInvite() {
+    const self = this
+    const v = this.inviteCode.value
+    console.log(v)
+    if (v) {
+      self.setState({inviteFeedback: "lookginf ro " + v})
+      database
+      .ref("invites/" + v)
+      .once("value")
+      .then(
+        (snapshot) => {
+          if(snapshot) {
+            let all = []
+            for(var key in snapshot.val()) {
+              all.unshift(snapshot.val()[key])
+            }
+            self.setState({timeline: all})
+          } else {
+            self.setState({inviteFeedback: "Your invite could not be found. Please try again."})
+          }
+        }
+      )
+    } else {
+      self.setState({inviteFeedback: "Please enter an invite code to continue"})
+    }
+  }
+  _addPerson() {
     const self = this
     var ownerId = self.props.user.uid;
 
@@ -29,7 +75,7 @@ class Students extends React.Component {
     }
 
 
-    const studentId = database
+    const newPersonId = database
     .ref("people" )
     .push(newStudent)
     .key
@@ -37,21 +83,78 @@ class Students extends React.Component {
 
     if (self.props.personId) {
       database
-      .ref("people/" + studentId + "/guardians")
+      .ref("people/" + newPersonId + "/guardians")
       .push(self.props.personId)
 
       database
       .ref("people/" + self.props.personId + "/children")
-      .push(studentId)
+      .push(newPersonId)
     } else {
       console.log('doh... no person ID attached at login.')
     }
 
   }
-  _select(student) {
-    this.props.selectStudent(student)
+  _select(person) {
+    this.props.selectViewPerson(person)
+    setTimeout(browserHistory.push("/dashboard"), 100)
   }
 
+  _invite(person) {
+    console.log('inviting ...',person, person.val(), person.key )
+    this.setState({
+      setupInvite: person.key
+    })
+  }
+  _calcInviteKey(person, role) {
+    const self = this
+    console.log('the role ', role, ' for key', person.key)
+
+    if (!role) {
+      this.setState({
+        alert: "Please select a Role to continue."
+      })
+      return
+    }
+
+    var d = new Date()
+    d.setDate(d.getDate() + 7)
+
+    const key=database
+              .ref("people/" + person.key + "/invites")
+              .push({
+                sender: self.props.personId ,
+                sender_uid:  self.props.user.uid,
+                expires: d.getTime(),
+                role: role,
+                acceptedOn: 0,
+                uid: "",
+                personId: ""
+              })
+              .key
+
+    this.setState({
+      alert:"Please provide the following code to the invitee: " + key
+    })
+
+    database
+    .ref("invites")
+    .push()
+
+    var updates = {}
+
+    updates['invites/' + key] = {
+        inviteId: key,
+        personId: person.key,
+        acceptedOn: 0
+      }
+    database.ref().update(updates);
+
+            // updates['/people/' + personId + '/isSuperAdmin'] = true;
+            // updates['/people/' + personId + '/isBDFL'] = true;
+            //
+
+
+  }
   _selectPic(e) {
     const self = this
     try {
@@ -87,30 +190,37 @@ class Students extends React.Component {
         });
     }
   }
-  componentWillMount() {
+  componentDidMount() {
     const self = this
     try {
+      let people = []
+
+      self.setState({people:people})
+
       var uid = self.props.user.uid;
+      if (uid && self.props.personId) {
+        console.log('getting my people... ',self.props, self.props.personId)
 
-      database
-      .ref("people")
-      .orderByChild("ownerId")
-      .equalTo(self.props.personId)
-      .on('child_added', (data)=> {
-        self.setState({students: [...this.state.students, data ]})
-      })
-    } catch(x) {
-      console.log(x)
-    }
-
-  }
-  componentWillUnmount() {
-    try {
-      if (this.props.user) {
-        var uid = this.props.user.uid;
         database
-        .ref("students/" + uid)
-        .off()
+        .ref("people/" + self.props.personId + "/children")
+        .on('child_added',
+          child => {
+            console.log('retrieved child: ', child, child.key, child.val())
+            database
+            .ref("people/" + child.val())
+            .on('value',
+              data => {
+                // this may not look correct, but it is, otherwise the react state is not going to be correct
+                // as the events will use the prior copy of the state before it had a chance to update.
+                people.push(data)
+                self.setState({people: people })
+              }
+            )
+          }
+        )
+
+      } else {
+        console.log('no uid in ', self.props )
       }
 
     } catch(x) {
@@ -118,54 +228,141 @@ class Students extends React.Component {
     }
 
   }
+
+
   render() {
-    return <div>
-      <form>
-        <div className="form-group">
-          <label htmlFor="studentName">Name</label>
-          <input type="text" className="form-control" placeholder="name" ref={(e)=>{this.studentName=e} } />
-        </div>
-        <div className="form-group">
-          <label htmlFor="studentPic">Picture</label>
-          <input type="file" className="form-control"
-            onChange={ this._selectPic } />
+    return <div className="container">
+      <ReactSwipe className="carousel" swipeOptions={this.swipeOptions}
+          ref={(e) => { this.ReactSwipe = e } } >
+
+        <div>
+          <table className="table table-striped">
+            <thead>
+              <tr>
+                <th>Person</th>
+                <th>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+
+
+              {
+                this.state.people &&
+                this.state.people.map((person, index) => {
+                console.log('mapping ', index, person )
+                if(person) {
+                  return  <tr key={index}>
+                            <td>
+
+                              <img src={person.val().picURL || "/img/generic.jpg"} alt={person.val().name}
+                                title={person.val().name} style={{width:"55px"}}
+                                onClick={ e => this._select(person) }
+                              />
+                            &nbsp;
+                            { }
+                            &nbsp;
+                            <a href='#' onClick={e => this._select(person) }>{person.val().name}</a>
+                            </td>
+                            <td>
+
+
+                              {
+                                (this.state.setupInvite  && this.state.setupInvite == person.key)
+                                &&
+                                <div>
+                                  <select onChange={e=>this.role=e.target.value}>
+                                    <option value=""></option>
+                                    <option value="parent">Parent</option>
+                                    <option value="teacher">Teacher</option>
+                                    <option value="therapist">Therapist</option>
+                                  </select>
+                                  <br/>
+                                  <button type="button" className="btn btn-primary"
+                                    onClick={ e=> this._calcInviteKey(person, this.role)}>
+                                    Invite
+                                  </button>
+                                  <br/>
+                                  {
+                                    this.state.alert &&
+                                    <div className="alert">
+                                      {this.state.alert}
+                                    </div>
+                                  }
+                                </div>
+                              }
+                              {
+                                this.state.setupInvite !== person.key &&
+                                <div>
+                                  <button type="button" className="btn btn-primary" onClick={(e) => this._select(person)} >
+                                    <i className="fa fa-pencil"> select </i>
+                                  </button>
+                                  &nbsp;
+                                  <button type="button" className="btn btn-default" onClick={ e=> this._invite(person)} >
+                                    <i className="fa fa-share-alt"> invite </i>
+                                  </button>
+
+                                </div>
+                              }
+                              </td>
+                          </tr>
+                } else {
+                  return null
+                }
+              })}
+            </tbody>
+          </table>
         </div>
         <div>
-          <img src={this.picURL} style={{width:"200px"}} ref={(e)=>{this.preview = e}} />
+          <form>
+            <div className="form-group">
+              <label htmlFor="studentName">Name</label>
+              <input type="text" className="form-control" placeholder="name" ref={(e)=>{this.studentName=e} } />
+            </div>
+            <div className="form-group">
+              <label htmlFor="studentPic">Picture</label>
+              <input type="file" className="form-control"
+                onChange={ this._selectPic } />
+            </div>
+            <div>
+              <img src={this.picURL} style={{width:"200px"}} ref={(e)=>{this.preview = e}} />
+            </div>
+          </form>
+          <button type="button" className="btn btn-block btn-primary" onClick={this._addPerson}>Add</button>
         </div>
-      </form>
-      <button type="button" className="btn btn-block btn-primary" onClick={this._addStudent}>Add</button>
-      <hr/>
-      <table className="table table-striped">
-        <thead>
-          <tr>
-            <th>Student</th>
-            <th>Select</th>
-          </tr>
-        </thead>
-        <tbody>
-          { this.state.students.map((student, index) => {
-            if(student) {
-              return  <tr key={index}>
-                        <td>{student.val().name}</td>
-                        <td><button type="button" className="btn" onClick={(e) => this._select(student)} >Select </button></td>
-                      </tr>
-            } else {
-              return null
+        <div className="panel panel-info">
+          <div className="panel-heading">Invites</div>
+          <div className="panel-body">
+            <p>
+              If you received an invite code, enter it here
+            </p>
+            <div className="form-group">
+              <label htmlFor="invite">Invite</label>
+              <input type="text" className="form-control" placeholder="invite code" ref={ (e) => {this.inviteCode=e} } />
+            </div>
+            <button type="button" className="btn btn-primary" onClick={this._acceptInvite}>Submit</button>
+          </div>
+          <div className="panel-footer">
+            {
+              this.state.inviteFeedback &&
+              <div className="alert">
+                {this.state.inviteFeedback}
+              </div>
             }
-          })}
-        </tbody>
-      </table>
+          </div>
+        </div>
+      </ReactSwipe>
+
+
+
     </div>
   }
 }
 
 export default connect(
   (state, ownProps) => {
-    console.log('connecting state ', state)
     return {
       user: state.auth.user,
-      student: state.students.student,
       personId: state.auth.personId
     }
   },
@@ -173,8 +370,9 @@ export default connect(
     onLogout: () => ({
       type:"logout", user: null, isAuthenticated: false, credentials: null
     }),
-    selectStudent: (student) => ({
-      type:"selectStudent", student: { key: student.key, val: student.val() }
+    selectViewPerson: (person) => ({
+      type:"selectViewPerson",
+      person: person
     }),
 
   }
