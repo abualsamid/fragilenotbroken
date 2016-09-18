@@ -38,7 +38,6 @@ class Students extends React.Component {
   _acceptInvite() {
     const self = this
     const v = this.inviteCode.value
-    console.log(v)
     if (v) {
       self.setState({inviteFeedback: "lookginf ro " + v})
       database
@@ -46,12 +45,51 @@ class Students extends React.Component {
       .once("value")
       .then(
         (snapshot) => {
+          console.log(snapshot)
           if(snapshot) {
-            let all = []
-            for(var key in snapshot.val()) {
-              all.unshift(snapshot.val()[key])
-            }
-            self.setState({timeline: all})
+            let snap = snapshot.val()
+            const friendId=snap.personId
+            const inviteId = snap.inviteId
+
+            database
+            .ref("people/" + friendId + "/invites/" +v)
+            .once("value")
+            .then(
+              s => {
+                if (s) {
+                  let myInvite = s.val()
+                  console.log(v, myInvite)
+                  const now = (new Date()).getTime()
+                  if (s.key==v && myInvite.acceptedOn==0 && myInvite.expires > now && !myInvite.personId) {
+                    let newFriend = database
+                                  .ref("people/" + self.props.personId + "/friends")
+                                  .push({
+                                    personId: friendId,
+                                    myRole: myInvite.role
+                                  })
+                                  .key
+
+                    self.setState({inviteFeedback: "Your invite was processed" })
+                    myInvite.acceptedOn = now
+                    myInvite.personId = self.props.personId
+                    myInvite.uid = self.props.user.uid
+
+                    let updatedInvite = {}
+                    updatedInvite["people/" + friendId + "/invites/" +v] = myInvite
+                    database
+                    .ref()
+                    .update(updatedInvite)
+
+                    database 
+                    .ref("people/friendId/" + myInvite.role)
+                    .push(self.props.personId)
+                  } else {
+                    console.log(v, myInvite)
+                    self.setState({inviteFeedback:"your invite expired"})
+                  }
+                }
+              }
+            )
           } else {
             self.setState({inviteFeedback: "Your invite could not be found. Please try again."})
           }
@@ -232,29 +270,40 @@ class Students extends React.Component {
 
   render() {
     return <div className="container">
-      <ReactSwipe className="carousel" swipeOptions={this.swipeOptions}
-          ref={(e) => { this.ReactSwipe = e } } >
+      <ReactSwipe className="carousel" swipeOptions={{continuous: true}}>
+
+        <div className="panel panel-info">
+          <div className="panel-heading">Invites</div>
+          <div className="panel-body">
+            <p>
+              If you received an invite code, enter it here
+            </p>
+            <div className="form-group">
+              <label htmlFor="invite">Invite</label>
+              <input type="text" className="form-control" placeholder="invite code" ref={ (e) => {this.inviteCode=e} } />
+            </div>
+            <button type="button" className="btn btn-primary" onClick={this._acceptInvite}>Submit</button>
+          </div>
+          <div className="panel-footer">
+            {
+              this.state.inviteFeedback &&
+              <div className="alert">
+                {this.state.inviteFeedback}
+              </div>
+            }
+          </div>
+        </div>
 
         <div>
           <table className="table table-striped">
-            <thead>
-              <tr>
-                <th>Person</th>
-                <th>
-                </th>
-              </tr>
-            </thead>
+            <thead><tr><th>Person</th><th></th></tr></thead>
             <tbody>
-
-
               {
                 this.state.people &&
                 this.state.people.map((person, index) => {
-                console.log('mapping ', index, person )
                 if(person) {
                   return  <tr key={index}>
                             <td>
-
                               <img src={person.val().picURL || "/img/generic.jpg"} alt={person.val().name}
                                 title={person.val().name} style={{width:"55px"}}
                                 onClick={ e => this._select(person) }
@@ -265,8 +314,6 @@ class Students extends React.Component {
                             <a href='#' onClick={e => this._select(person) }>{person.val().name}</a>
                             </td>
                             <td>
-
-
                               {
                                 (this.state.setupInvite  && this.state.setupInvite == person.key)
                                 &&
@@ -313,6 +360,7 @@ class Students extends React.Component {
             </tbody>
           </table>
         </div>
+
         <div>
           <form>
             <div className="form-group">
@@ -330,31 +378,9 @@ class Students extends React.Component {
           </form>
           <button type="button" className="btn btn-block btn-primary" onClick={this._addPerson}>Add</button>
         </div>
-        <div className="panel panel-info">
-          <div className="panel-heading">Invites</div>
-          <div className="panel-body">
-            <p>
-              If you received an invite code, enter it here
-            </p>
-            <div className="form-group">
-              <label htmlFor="invite">Invite</label>
-              <input type="text" className="form-control" placeholder="invite code" ref={ (e) => {this.inviteCode=e} } />
-            </div>
-            <button type="button" className="btn btn-primary" onClick={this._acceptInvite}>Submit</button>
-          </div>
-          <div className="panel-footer">
-            {
-              this.state.inviteFeedback &&
-              <div className="alert">
-                {this.state.inviteFeedback}
-              </div>
-            }
-          </div>
-        </div>
+
+
       </ReactSwipe>
-
-
-
     </div>
   }
 }
@@ -363,7 +389,8 @@ export default connect(
   (state, ownProps) => {
     return {
       user: state.auth.user,
-      personId: state.auth.personId
+      personId: state.auth.personId,
+      person : state.auth.person
     }
   },
   {
