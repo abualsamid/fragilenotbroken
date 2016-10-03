@@ -1,19 +1,26 @@
 import React from 'react';
 import { connect } from 'react-redux'
 import log from './log'
+import {getWeek, getYear, getMonth, getDate} from './utils/fb'
 
 class D extends React.Component {
   constructor(props) {
     super(props)
     this.drawChart = this.drawChart.bind(this)
     this.do = this.do.bind(this)
+    this._filterChanged=this._filterChanged.bind(this)
+
     this.state = {
       green: 0,
-      red: 0
+      red: 0,
+      filter: "all",
+      allStats : {}
     }
+
     require.ensure([], (require) => {
       var log = require('./log')
     })
+
     try {
       log('inside Dashboard constructor')
     } catch(x) {
@@ -22,62 +29,100 @@ class D extends React.Component {
   }
 
 
-
   do() {
     if (google && google.visualization) {
       this.drawChart()
-
     } else {
       log('hi')
       setTimeout(this.do, 250)
     }
   }
 
-  componentWillMount() {
+
+
+  _filterChanged(filter="all") {
     const self = this
-    if(this.props && this.props.viewPerson && this.props.viewPersonId) {
-      try {
+    if(self.props && self.props.viewPerson && self.props.viewPersonId) {
+      console.log('in _filter changed ', filter )
+      self.setState({filter})
+      setTimeout(this.do, 250)
+
+    }
+
+
+  }
+  componentWillUnmount() {
+    try {
+      firebase
+      .database()
+      .ref("/people/" + this.props.viewPersonId + "/stats/behaviors")
+      .off()
+    } catch(x) {
+      console.log(x)
+    }
+  }
+  componentDidMount() {
+    const self = this
+    self.behaviorChart = new google.visualization.ColumnChart(document.getElementById('behaviorChart'));
+    self.pieChart = new google.visualization.PieChart(document.getElementById("pieChart"))
+    try {
         firebase
         .database()
         .ref("/people/" + this.props.viewPersonId + "/stats/behaviors")
         .on("value",
           value => {
-            let cats = value.val()
-            log('categories are ', cats )
-            self.setState({
-              green: cats["green"] ? cats["green"]["all"] : 0,
-              red: cats["red"] ? cats["red"]["all"] : 0,
-            })
+            if (value && value.val()) {
+              let allStats = value.val()
+              console.log('got allStats back ', allStats)
+              allStats["green"] = allStats["green"] || {}
+              allStats["red"] = allStats["red"] || {}
+              self.setState({allStats})
+              self._filterChanged()
+            }
           }
         )
-      } catch(x) {
-        console.log(x)
-      }
-    }
-
-
-  }
-  componentDidMount() {
-    const self = this
-
-    try {
-      setTimeout(self.do, 250)
     } catch(x) {
-      log(x)
+      console.log(x)
     }
-  }
-
-  componentDidUpdate() {
-    this.drawChart()
   }
 
   drawChart() {
       const self = this
+      let green = 0
+      let red = 0
+      if (this.state.filter=="all") {
+        try {
+          green = this.state.allStats.green[this.state.filter]||0
+
+        } catch(x) {console.log(x)}
+        try {
+          red = this.state.allStats.red[this.state.filter]||0
+        } catch(x) {console.log(x)}
+
+      } else {
+        let s = this.state.filter.split("/")
+        try {
+          green = this.state.allStats.green[s[0]][s[1]]||0
+          console.log('set green to ', green, ' for ', s)
+        } catch(x) {
+          console.log(x, 'green', this.state.allStats.green, s)
+        }
+
+        try {
+          red = this.state.allStats.red[s[0]][s[1]]||0
+          console.log('set red to ', red, ' for ', s)
+        } catch(x) {
+          console.log(x,'red', this.state.allStats.red, s)
+        }
+
+      }
+      green = Math.abs(green)
+      red = Math.abs(red)
       var behaviorData = google.visualization.arrayToDataTable(
         [
           ['Behavior','Count',{role: 'style'}, {role: 'annotation'}],
-          ['Green Thought', this.state.green, 'color: green', this.state.green],
-          ['Red Thought', this.state.red, 'color: red', this.state.red]
+          ['Green Thought', Math.abs(green), 'color: green', "Green"],
+          ['Red Thought', Math.abs(red), 'color: red', "Red"]
         ]
       )
 
@@ -90,18 +135,42 @@ class D extends React.Component {
         },
 
       };
+      self.behaviorChart.draw(behaviorData, options);
 
-      // Instantiate and draw the chart.
 
-      var behaviorChart = new google.visualization.ColumnChart(document.getElementById('behaviorChart'));
-      behaviorChart.draw(behaviorData, options);
+
+    var pieOptions = {
+        chartArea: {width:'100%',height:'100%'},
+        forceIFrame: 'false',
+        is3D: 'true',
+        pieSliceText: 'value',
+        // sliceVisibilityThreshold: 1/20, // Only > 5% will be shown.
+        titlePosition: 'top',
+        colors: [
+          'green', 'red'
+        ]
+    };
+    self.pieChart.draw(behaviorData, pieOptions );
   }
 
   render() {
     return (
       <div style={{backgroundColor:"white", height:"100%", minHeight:"100%", padding: "1em"}}>
         <h3>Behaviors</h3>
+        <div className="form-group">
+          <select className="form-control" value={this.state.filter}
+            onChange={e=> this._filterChanged(e.target.value) }>
+            <option value="all">All</option>
+            <option value={"date/" + getDate()}>Today - {getDate()}</option>
+            <option value={"week/" + getWeek()}>This week - {getWeek()}</option>
+            <option value={"month/" + getMonth()}>This month - {getMonth()}</option>
+            <option value={"year/" + getYear()}>Year: {getYear()} </option>
+          </select>
+        </div>
+
         <div id='behaviorChart' />
+        <br/>
+        <div id="pieChart" />
       </div>
     )
   }

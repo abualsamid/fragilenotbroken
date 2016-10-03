@@ -18,7 +18,7 @@ class Nav extends React.Component {
               <span className="icon-bar"></span>
               <span className="icon-bar"></span>
             </button>
-            <a  href="/">
+            <IndexLink to="/" activeClassName="active" className="nav-link">
             {
               self.props.viewPersonId &&
                 <img src={self.props.viewPerson.picURL || self.props.viewPerson.photoURL || "/img/generic.jpg"} alt={self.props.viewPerson.name}
@@ -29,15 +29,13 @@ class Nav extends React.Component {
               !self.props.viewPersonId &&
                 <img src='img/x.png' alt='fragile not broken' title='fragile not broken'/>
             }
-            </a>
+            </IndexLink>
           </div>
           <div id="navbar" className="navbar-collapse collapse">
             <ul className="nav navbar-nav">
               <li className="active">
                 <IndexLink to="/" activeClassName="active" className="nav-link">Home</IndexLink>
               </li>
-
-
             </ul>
             <ul className="nav navbar-nav navbar-right">
 

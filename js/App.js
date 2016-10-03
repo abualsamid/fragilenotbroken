@@ -86,14 +86,12 @@ class App extends React.Component {
                               .ref("people")
                               .push(person)
                               .key
-            log('created person with key: ', personId)
             self._createFBUser(user.uid, personId, user.email )
             self.props.onAuthenticated(user, "", personId, false, false, person )
 
           } else {
             const personId = Object.keys(person)[0]
             const peep = person[personId]
-            log('retrieved person with key: ', personId, peep)
             self._createFBUser(user.uid, personId, user.email )
             self.props.onAuthenticated(user, "", personId, peep.isSuperAdmin, peep.isBDFL, peep)
 
@@ -125,10 +123,8 @@ class App extends React.Component {
   }
   componentWillMount() {
     const self = this
-    console.log('in app.js componentWillMount ')
     this.unsubscribe = firebase.auth().onAuthStateChanged(
       (user) => {
-        console.log('On Auth State Changed ', user )
         try {
           if(user) {
             self._retrieveFBPerson(user)
@@ -140,6 +136,46 @@ class App extends React.Component {
         }
       }
     )
+
+    try {
+      database
+      .ref("list_behaviors")
+      .once("value",
+        snap => {
+          if (snap && snap.val() ) {
+            try {
+              console.log('from db ', snap.val())
+              self.props.onListBehaviors(snap.val())
+            } catch(x) {
+              console.log(x)
+            }
+
+          } else {
+            const arr = [{
+                caption: "Hyper Activity",
+                delta: 1.0,
+                value: 0 // this holds the place for us to track state in the app, it will always be 0 in the db
+              }, {
+                caption:"Proper Eating",
+                delta: 1.0,
+                value: 0 // this holds the place for us to track state in the app, it will always be 0 in the db
+              }]
+
+            arr.map(
+              b => {
+                database
+                .ref("list_behaviors")
+                .push(b)
+              }
+            )
+          }
+        }
+      )
+    } catch(x) {
+      console.log('doh list_behaviors ', x)
+    }
+
+
   }
   componentWillUnmount() {
     try {
@@ -246,16 +282,23 @@ export default connect(
         isAuthenticated: true,
         credentials: credentials,
         personId: personId,
+        displayName: person? person.displayName||"" : "",
+        photoURL: person ? person.photoURL || person.picURL || "" : "",
         isSuperAdmin: isSuperAdmin,
         isBDFL: isBDFL,
         viewPersonId: personId,
-        viewPerson: person
+        viewPerson: person,
+
       }
     },
     reAuth: (user) => ({
         type: "auth",
         user: user,
         isAuthenticated: true
+    }),
+    onListBehaviors: (behaviors) => ({
+      type: "onListBehaviors",
+      list_behaviors: behaviors
     })
   }
 )(App)

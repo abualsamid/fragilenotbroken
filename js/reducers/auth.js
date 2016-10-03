@@ -7,19 +7,24 @@ const initialState = {
   isSuperAdmin: false,
   isBDFL: false,
   viewPersonId: "",
-  viewPerson: null
+  viewPerson: null,
+  displayName: "",
+  photoURL: "",
+  list_behaviors: {}
 }
 
 
 export default function auth(state = initialState, action) {
+
   switch(action.type) {
     case "login":
-      console.log('reducing login ', action )
       return  { ...state,
                 user: action.user,
                 isAuthenticated: action.isAuthenticated,
                 credentials: action.credentials,
                 personId: action.personId,
+                displayName: action.displayName || "",
+                photoURL: action.photoURL || "",
                 isSuperAdmin: action.isSuperAdmin,
                 isBDFL: action.isBDFL,
                 viewPersonId: action.viewPersonId,
@@ -28,9 +33,10 @@ export default function auth(state = initialState, action) {
     case "auth":
       return { ...state, user: action.user, isAuthenticated: action.isAuthenticated}
     case "selectViewPerson":
-      console.log('selecting student ', action.person )
       return { ...state, viewPersonId: action.person.key, viewPerson: action.person.val()}
-
+    case "onListBehaviors":
+      console.log('reducing ',action.list_behaviors)
+      return { ...state, list_behaviors: action.list_behaviors}
     case "logout":
       return initialState
   }

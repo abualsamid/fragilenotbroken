@@ -1,66 +1,100 @@
 import React from 'react';
-import { connect } from 'react-redux'
 
 
-class AddBehavior extends React.Component {
+
+
+
+
+
+
+export default class AddBehavior extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
-      message: ""
+      behaviors: {}
     }
-    this._messageChanged = this._messageChanged.bind(this)
-    this._submit = this._submit.bind(this)
-    console.log('fire base is ', firebase)
-    console.log('student is ',this.props.student, this.props.student.val, this.props.student.key )
+    this._isSelected = this._isSelected.bind(this)
+    this._select = this._select.bind(this)
   }
 
-  _messageChanged(e) {
-    this.setState({message: e.target.value })
+
+
+
+
+  _isSelected(key,dir) {
+    if (!this.state.behaviors[key] || this.state.behaviors[key].value==0) {
+      return "fa fa-square-o"
+    }
+    if (this.props.behaviors[key] ) {
+      if (dir>0 &&  this.props.behaviors[key].value>0) {
+        return "fa fa-check-square-o"
+      }
+      if (dir<0 &&  this.props.behaviors[key].value<0) {
+        return "fa fa-check-square-o"
+      }
+
+    }
+    return "fa fa-square-o"
   }
-  _submit(t) {
-    console.log(t)
-    console.log(this.state.message)
-    this.setState({message:""})
-    // firebase
-    // .database()
-    // .ref()
+  _select(key, delta) {
+    const self = this
+    let news = Object.assign({}, self.state.behaviors)
+
+    if(news[key]) {
+      news[key] = news[key]==delta ? 0 : delta
+    } else {
+      news[key] = delta
+
+    }
+    self.setState({behaviors: news})
+    self.props.onChange(key, delta)
+    return
+
+
   }
+
 
   render() {
+    const self = this
+
     return (
-      <div className="container">
-        <div>
-        </div>
-        <div className="form-group">
-          <textarea className="form-control"  onChange={this._messageChanged} value={this.state.message} />
-        </div>
-        <button type="button" className="btn btn-block btn-lg btn-success" onClick={ () => this._submit(0) }>Calm Hands</button>
-        <button type="button" className="btn btn-block btn-lg btn-danger" onClick={ () => this._submit(1) }>Excited Hands</button>
-        <button type="button" className="btn btn-block btn-lg btn-success"onClick={ () => this._submit(2) }>Neat Eating</button>
-        <button type="button" className="btn btn-block btn-lg btn-danger" onClick={ () => this._submit(3) }>Messy Eating</button>
+      <div>
+        {
+          Object.keys(this.props.behaviors).map(
+            key =>
+            <div className="row" key={key}>
+              <div className="col-xs-4">
+                {this.props.behaviors[key].caption}
+              </div>
+              <div className="col-xs-8">
+                <div className="btn-toolbar" role="toolbar">
+                  <div className="btn-group" role="group">
+                    <button type="button" className="btn btn-success" onClick={ e => this._select(key,1)} style={{width: "4em"}}>
+                      <i className={this._isSelected(key,1)} ></i>
+                      &nbsp;
+                      <i className="fa fa-thumbs-o-up"></i>
+                    </button>
+
+                  </div>
+                  &nbsp;
+
+                  <div className="btn-group" role="group">
+                    <button type="button" className="btn btn-danger" onClick={e=> this._select(key,-1)} style={{width: "4em"}}>
+                      <i className={this._isSelected(key,-1)} ></i>
+                      &nbsp;
+                      <i className="fa fa-thumbs-o-down"></i>
+                    </button>
+
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+
+        }
       </div>
+
     )
 
   }
 }
-
-export default connect(
-  (state, ownProps) => {
-    console.log('connecting state ', state)
-    return {
-      user: state.auth.user,
-      viewPersonId: state.auth.viewPersonId
-    }
-  },
-  {
-    onLogout: () => ({
-      type:"logout", user: null, isAuthenticated: false, credentials: null
-    }),
-    selectStudent: (student) => ({
-      type:"selectStudent", student: student
-    }),
-
-  }
-
-
-)(AddBehavior)

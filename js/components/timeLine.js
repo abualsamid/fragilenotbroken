@@ -2,6 +2,25 @@ import React from 'react';
 import { connect } from 'react-redux'
 import behaviors, {redStyle, greenStyle, redStyleSelected, greenStyleSelected} from './behaviors'
 
+const Media = ({src}) => {
+  const u= src.split('?')[0]
+  switch(u.split('.').pop().toLowerCase()) {
+    case "mov":
+      return (
+        <div>
+          <video controls="controls" src={src} style={{maxWidth: "50%"}} />
+        </div>
+      )
+    default:
+      return (
+        <div>
+          <img src={src} style={{maxWidth: "50%"}} />
+        </div>
+      )
+
+  }
+}
+
 class TimeLine extends React.Component {
   constructor(props) {
     super(props)
@@ -9,11 +28,11 @@ class TimeLine extends React.Component {
       timeline:[]
     }
   }
-  componentWillMount() {
+  
+  componentDidMount() {
     const self = this
     try {
       if(self.props && self.props.viewPersonId ) {
-        console.log('retrieving time line for ', self.props.viewPersonId)
         firebase
         .database()
         .ref("people/" + this.props.viewPersonId + "/timeline")
@@ -39,61 +58,101 @@ class TimeLine extends React.Component {
         case 0:
           return null;
         case 1:
-          return <img src="img/angry.svg" style={{width:"25px", marginRight:"1em", marginLeft:"1em"}} />
+          return <img src="img/angry.svg" style={{width:"25px", marginRight:"1em"}} />
         case 2:
-          return <img src="img/happy.svg" style={{width:"25px", marginRight:"1em", marginLeft:"1em"}} />
+          return <img src="img/happy.svg" style={{width:"25px", marginRight:"1em"}} />
         case 3:
-          return <img src="img/crying.svg" style={{width:"25px", marginRight:"1em", marginLeft:"1em"}} />
+          return <img src="img/crying.svg" style={{width:"25px", marginRight:"1em"}} />
 
 
       }
     }
     function behavior(b) {
-      switch(b) {
-        case 0:
-          return null;
-        default:
-          return behaviors.reduce(
-            (prev, current, index, array) => current.value==b
-              ?
-              <span className={current.txtStyle} style={{paddingRight:"1em", paddingLeft: "1em"}} >{current.caption}</span>
-              :
-              prev
-            ,
-            ""
-          )
+      if (!b) {
+        return null
       }
+
+      return <div>
+        {
+          Object.keys(b).map(
+            key => {
+              let v = b[key]
+              if (v.value!==0) {
+                let cName=v.value>0?"text-success":"text-danger"
+                let iName=v.value>0?"fa fa-thumbs-o-up":"fa fa-thumbs-o-down"
+                return (
+                  <span key={key} className={cName} style={{paddingRight:"1em", paddingLeft: "1em"}}>
+                    <i className={iName}> </i>
+                    &nbsp;
+                    {v.caption}
+                  </span>
+                )
+
+              }
+            }
+          )
+        }
+      </div>
+      //
+      // switch(b) {
+      //   case 0:
+      //     return null;
+      //   default:
+      //     return behaviors.reduce(
+      //       (prev, current, index, array) => current.value==b
+      //         ?
+      //         <span className={current.txtStyle} style={{paddingRight:"1em", paddingLeft: "1em"}} >{current.caption}</span>
+      //         :
+      //         prev
+      //       ,
+      //       ""
+      //     )
+      // }
     }
     return (
       <div>
         {
           this.state.timeline.map(
             (e, i ) => (
-              <div key={i} style={{padding:"2em",marginBottom:"1em", marginTop:"1em", border:"1px solid gray", backgroundColor: i%2?"white":"#eee" }}>
+              <div key={i} style={{padding:"1em",marginBottom:"1em", marginTop:"1em", border:"1px solid gray", backgroundColor: i%2?"white":"#eee" }}>
                 <div key={e.date}>
-                  <div>
-                    <span style={{fontSize:"small", fontWeight:"light"}}>
-                      {
-                        (new Date(e.date)).toString()
-                      }
-                    </span>
+                  <div className="row">
+                    <div className="col-xs-3 col-md-1">
+                      <img src={e.postedByPhotoURL  || "/img/generic.jpg"} alt={e.postedByDisplayName}
+                        title={e.postedByDisplayName}
+                        style={{maxWidth:"100%", width:"100%"}} />
+                    </div>
+                    <div className="col-xs-9 col-md-11">
+                      <div>
+                        { e.postedByDisplayName || ""}
+                      </div>
+                      <div>
+                        <span style={{fontSize:"small", fontWeight:"light"}}>
+                          {
+                            (new Date(e.date)).toString()
+                          }
+                        </span>
+                      </div>
+                      <div>
+                        {mood(e.mood)}
+
+                      </div>
+                    </div>
 
                   </div>
                   <br/>
-                  <div>
-                    {e.message}
-
+                  <div className="row">
+                    <div className="col-xs-12 col-md-12">
+                      {e.message}
+                    </div>
                   </div>
                   <br/>
                   {
                     e.mediaURL &&
-                    <div>
-                      <img src={e.mediaURL} style={{maxWidth: "50%"}} />
-                    </div>
+                      <Media src={e.mediaURL} />
                   }
                   <br/>
-                  {mood(e.mood)}
-                  {behavior(e.behavior)}
+                  {behavior(e.behaviors)}
                   <br/>
 
                 </div>

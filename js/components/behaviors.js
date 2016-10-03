@@ -10,24 +10,6 @@ let behaviors =  [
           value: 0
         },
         {
-          caption: "Excited",
-          style: redStyle,
-          defaultStyle: redStyle,
-          txtStyle: "btn btn-danger",
-          selected: false,
-          value: 1,
-          category: "red"
-        },
-        {
-          caption: "Messy Eating",
-          style: redStyle,
-          defaultStyle: redStyle,
-          txtStyle: "btn btn-danger",
-          selected: false,
-          value: 2,
-          category: "red"
-        },
-        {
           caption: "Calm",
           style: greenStyle,
           defaultStyle: greenStyle,
@@ -36,6 +18,16 @@ let behaviors =  [
           value: 3,
           category: "green"
 
+        },
+
+        {
+          caption: "Excited",
+          style: redStyle,
+          defaultStyle: redStyle,
+          txtStyle: "btn btn-danger",
+          selected: false,
+          value: 1,
+          category: "red"
         },
         {
           caption: "Proper Eating",
@@ -46,6 +38,15 @@ let behaviors =  [
           value: 4,
           category: "green"
 
+        },
+        {
+          caption: "Messy Eating",
+          style: redStyle,
+          defaultStyle: redStyle,
+          txtStyle: "btn btn-danger",
+          selected: false,
+          value: 2,
+          category: "red"
         }
       ]
 

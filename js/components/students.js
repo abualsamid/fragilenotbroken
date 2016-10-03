@@ -24,13 +24,14 @@ class Students extends React.Component {
     this._calcInviteKey=this._calcInviteKey.bind(this)
     this.picURL = ""
 
+    const self = this
     this.swipeOptions = {
       continuous: true,
       callback(index,element) {
-       console.log('slide changed: ', index);
       },
       transitionEnd(index,element) {
-        console.log('slide changed: ', index);
+        self.inviteCode.value=""
+        self.setState({inviteFeedback:""})
       }
     }
   }
@@ -39,14 +40,14 @@ class Students extends React.Component {
     const self = this
     const v = this.inviteCode.value
     if (v) {
-      self.setState({inviteFeedback: "lookginf ro " + v})
+      self.setState({inviteFeedback: "counting bits over the ether " })
       database
       .ref("invites/" + v)
       .once("value")
       .then(
         (snapshot) => {
           console.log(snapshot)
-          if(snapshot) {
+          if(snapshot && snapshot.val()) {
             let snap = snapshot.val()
             const friendId=snap.personId
             const inviteId = snap.inviteId
@@ -80,24 +81,31 @@ class Students extends React.Component {
                     .ref()
                     .update(updatedInvite)
 
-                    database 
+                    database
                     .ref("people/friendId/" + myInvite.role)
                     .push(self.props.personId)
                   } else {
                     console.log(v, myInvite)
                     self.setState({inviteFeedback:"your invite expired"})
+                    this.inviteCode.value=""
                   }
+                } else {
+                  self.setState({inviteFeedback: "Your invite could not be found. Please try again."})
+                  this.inviteCode.value=""
+
                 }
               }
             )
           } else {
             self.setState({inviteFeedback: "Your invite could not be found. Please try again."})
+            this.inviteCode.value=""
           }
         }
       )
     } else {
       self.setState({inviteFeedback: "Please enter an invite code to continue"})
     }
+    this.inviteCode.value=""
   }
   _addPerson() {
     const self = this
@@ -121,12 +129,15 @@ class Students extends React.Component {
 
     if (self.props.personId) {
       database
-      .ref("people/" + newPersonId + "/guardians")
+      .ref("people/" + newPersonId + "/parents")
       .push(self.props.personId)
 
       database
-      .ref("people/" + self.props.personId + "/children")
-      .push(newPersonId)
+      .ref("people/" + self.props.personId + "/friends")
+      .push({
+        myRole:"parent",
+        personId: newPersonId
+      })
     } else {
       console.log('doh... no person ID attached at login.')
     }
@@ -228,6 +239,21 @@ class Students extends React.Component {
         });
     }
   }
+  componentWillReceiveProps(nextProps) {
+    try {
+      this._reactSwipe.swipe.slide(0,10); // go to first slide when user renavigates to this tab.
+    } catch(x) {
+      console.log(x)
+    }
+  }
+  componentWillUnmount() {
+    const self = this
+    try {
+      database
+      .ref("people/" + self.props.personId + "/friends")
+      .off()
+    } catch(x) {console.log(x)}
+  }
   componentDidMount() {
     const self = this
     try {
@@ -240,20 +266,29 @@ class Students extends React.Component {
         console.log('getting my people... ',self.props, self.props.personId)
 
         database
-        .ref("people/" + self.props.personId + "/children")
+        .ref("people/" + self.props.personId + "/friends")
         .on('child_added',
           child => {
             console.log('retrieved child: ', child, child.key, child.val())
-            database
-            .ref("people/" + child.val())
-            .on('value',
-              data => {
-                // this may not look correct, but it is, otherwise the react state is not going to be correct
-                // as the events will use the prior copy of the state before it had a chance to update.
-                people.push(data)
-                self.setState({people: people })
-              }
-            )
+            if (child.val().myRole) {
+              let myRole = child.val().myRole
+              database
+              .ref("people/" + child.val().personId)
+              .on('value',
+                data => {
+                  // this may not look correct, but it is, otherwise the react state is not going to be correct
+                  // as the events will use the prior copy of the state before it had a chance to update.
+                  if (data && data.val()) {
+                    people.push({
+                      myRole: myRole,
+                      friend: data
+                    })
+                    self.setState({people: people })
+                  }
+                }
+              )
+            }
+
           }
         )
 
@@ -270,8 +305,103 @@ class Students extends React.Component {
 
   render() {
     return <div className="container">
-      <ReactSwipe className="carousel" swipeOptions={{continuous: true}}>
+      <ReactSwipe className="carousel" swipeOptions={this.swipeOptions} ref={e=>this._reactSwipe = e }>
 
+
+        <div>
+          <h2>Friends</h2>
+          <br/>
+              {
+                this.state.people &&
+                this.state.people.map((p, index) => {
+                if(p && p.friend ) {
+                  const myRole = p.myRole
+                  const person = p.friend
+                  if (person.val()) {
+                    if(this.state.setupInvite && this.state.setupInvite==person.key) {
+                      return <div key={index} className="row">
+                        <div className="col-xs-12">
+                            <div>
+                              <p>
+                                Please select an access role for the invitee
+                              </p>
+                              <div className="form-group">
+                                <label htmlFor="role">Role</label>
+                                  <select onChange={e=>this.role=e.target.value} className="form-control" id="role" name="role">
+                                    <option value="">(Please Select)</option>
+                                    <option value="parent">Parent</option>
+                                    <option value="teacher">Teacher</option>
+                                    <option value="therapist">Therapist</option>
+                                  </select>
+                              </div>
+
+                              <br/>
+                              <button type="button" className="btn btn-primary"
+                                onClick={ e=> this._calcInviteKey(person, this.role)}>
+                                Invite
+                              </button>
+                              <br/>
+                              {
+                                this.state.alert &&
+                                <div className="alert">
+                                  {this.state.alert}
+                                </div>
+                              }
+                            </div>
+                        </div>
+                      </div>
+                    } else {
+                      return  <div key={index} className="row">
+                                <div className="col-xs-6 col-md-4">
+                                  <img src={person.val().picURL || "/img/generic.jpg"} alt={person.val().name}
+                                    title={person.val().name} style={{width:"55px"}}
+                                    onClick={ e => this._select(person) }
+                                  />
+                                </div>
+                                <div className="col-xs-6 col-md-4">
+                                  <a href='#' onClick={e => this._select(person) }>{person.val().name}</a>
+                                </div>
+                                {
+                                  myRole=="parent" &&
+                                  <div className="col-xs-6 col-md-4">
+                                    <button type="button" className="btn btn-default" onClick={ e=> this._invite(person)} >
+                                      <i className="fa fa-share-alt"> invite </i>
+                                    </button>
+
+                                  </div>
+                                }
+
+                                <hr/>
+                              </div>
+                    }
+
+                  } else {
+                    return null
+                  }
+
+                } else {
+                  return null
+                }
+              })}
+        </div>
+
+        <div>
+          <form>
+            <div className="form-group">
+              <label htmlFor="studentName">Name</label>
+              <input type="text" className="form-control" placeholder="name" ref={(e)=>{this.studentName=e} } />
+            </div>
+            <div className="form-group">
+              <label htmlFor="studentPic">Picture</label>
+              <input type="file" className="form-control"
+                onChange={ this._selectPic } />
+            </div>
+            <div>
+              <img src={this.picURL} style={{width:"200px"}} ref={(e)=>{this.preview = e}} />
+            </div>
+          </form>
+          <button type="button" className="btn btn-block btn-primary" onClick={this._addPerson}>Add</button>
+        </div>
         <div className="panel panel-info">
           <div className="panel-heading">Invites</div>
           <div className="panel-body">
@@ -292,91 +422,6 @@ class Students extends React.Component {
               </div>
             }
           </div>
-        </div>
-
-        <div>
-          <table className="table table-striped">
-            <thead><tr><th>Person</th><th></th></tr></thead>
-            <tbody>
-              {
-                this.state.people &&
-                this.state.people.map((person, index) => {
-                if(person) {
-                  return  <tr key={index}>
-                            <td>
-                              <img src={person.val().picURL || "/img/generic.jpg"} alt={person.val().name}
-                                title={person.val().name} style={{width:"55px"}}
-                                onClick={ e => this._select(person) }
-                              />
-                            &nbsp;
-                            { }
-                            &nbsp;
-                            <a href='#' onClick={e => this._select(person) }>{person.val().name}</a>
-                            </td>
-                            <td>
-                              {
-                                (this.state.setupInvite  && this.state.setupInvite == person.key)
-                                &&
-                                <div>
-                                  <select onChange={e=>this.role=e.target.value}>
-                                    <option value=""></option>
-                                    <option value="parent">Parent</option>
-                                    <option value="teacher">Teacher</option>
-                                    <option value="therapist">Therapist</option>
-                                  </select>
-                                  <br/>
-                                  <button type="button" className="btn btn-primary"
-                                    onClick={ e=> this._calcInviteKey(person, this.role)}>
-                                    Invite
-                                  </button>
-                                  <br/>
-                                  {
-                                    this.state.alert &&
-                                    <div className="alert">
-                                      {this.state.alert}
-                                    </div>
-                                  }
-                                </div>
-                              }
-                              {
-                                this.state.setupInvite !== person.key &&
-                                <div>
-                                  <button type="button" className="btn btn-primary" onClick={(e) => this._select(person)} >
-                                    <i className="fa fa-pencil"> select </i>
-                                  </button>
-                                  &nbsp;
-                                  <button type="button" className="btn btn-default" onClick={ e=> this._invite(person)} >
-                                    <i className="fa fa-share-alt"> invite </i>
-                                  </button>
-
-                                </div>
-                              }
-                              </td>
-                          </tr>
-                } else {
-                  return null
-                }
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        <div>
-          <form>
-            <div className="form-group">
-              <label htmlFor="studentName">Name</label>
-              <input type="text" className="form-control" placeholder="name" ref={(e)=>{this.studentName=e} } />
-            </div>
-            <div className="form-group">
-              <label htmlFor="studentPic">Picture</label>
-              <input type="file" className="form-control"
-                onChange={ this._selectPic } />
-            </div>
-            <div>
-              <img src={this.picURL} style={{width:"200px"}} ref={(e)=>{this.preview = e}} />
-            </div>
-          </form>
-          <button type="button" className="btn btn-block btn-primary" onClick={this._addPerson}>Add</button>
         </div>
 
 

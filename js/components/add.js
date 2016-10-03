@@ -2,47 +2,60 @@ import React from 'react';
 import { connect } from 'react-redux'
 import log from '../log'
 import behaviors, {redStyle, greenStyle, redStyleSelected, greenStyleSelected} from './behaviors'
-import {inc, incAll, incYear, incMonth, incDate} from '../utils/fb'
+import subjects from './subjects'
+import {inc, incAll, incYear, incMonth, incDate, incWeek} from '../utils/fb'
+import AddBehavior from './addBehavior'
+
 
 class Add extends React.Component {
+  _initialState(props) {
+    return {
+     moods: [
+       {
+         caption: "n/a",
+         selected: false,
+         value: 0
+       },
+       {
+         caption: "Angry",
+         selected: false,
+         value: 1,
+         src: 'img/angry.svg',
+         style:""
+       },
+       {
+         caption: "Happy",
+         selected: false,
+         value: 2,
+         src: 'img/happy.svg',
+         style:""
+       },
+       {
+         caption: "Sad",
+         selected: false,
+         value: 3,
+         src: 'img/crying.svg',
+         style:""
+       }
+     ],
+     behaviors: {...props.list_behaviors},
+     subjects: subjects,
+     message: ""
+   }
+  }
+
   constructor(props) {
     super(props)
     this._add = this._add.bind(this)
     this._selectMood=this._selectMood.bind(this)
     this._previewFile=this._previewFile.bind(this)
     this._pushUpdates=this._pushUpdates.bind(this)
-    this.state= {
-      moods: [
-        {
-          caption: "n/a",
-          selected: false,
-          value: 0
-        },
-        {
-          caption: "Angry",
-          selected: false,
-          value: 1,
-          src: 'img/angry.svg',
-          style:""
-        },
-        {
-          caption: "Happy",
-          selected: false,
-          value: 2,
-          src: 'img/happy.svg',
-          style:""
-        },
-        {
-          caption: "Sad",
-          selected: false,
-          value: 3,
-          src: 'img/crying.svg',
-          style:""
-        }
-      ],
-      behaviors: behaviors
-    }
+    this._selectSubject=this._selectSubject.bind(this)
+    this._selectBehavior=this._selectBehavior.bind(this)
+
+    this.state=this._initialState(props)
   }
+
   _previewFile() {
     const self = this
     try {
@@ -57,42 +70,81 @@ class Add extends React.Component {
     } catch(x) {console.log('previewFile: ', x)}
 
   }
-  _pushUpdates(key, newKey, message, mood, behavior, mediaURL) {
+  _selectBehavior(key, direction) {
+    const self = this
+    let news = Object.assign({}, self.state.behaviors)
 
-    if (message || mood || behavior || mediaURL ) {
+    const delta = news[key].delta * direction
+    news[key].value = news[key].value==delta ? 0 : delta
+
+    self.setState({behaviors: news})
+    return false
+
+
+  }
+  _pushUpdates(key, newKey, message, mood, mediaURL, postedByPersonId,postedByDisplayName) {
+    const self = this
+    if (true ) {
       let updates = {}
       const self = this
-      updates["people/" + key + "/timeline/" + newKey ] = {
-        date: firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
-        message: message || "",
-        mood: mood,
-        behavior: behavior,
-        mediaURL: mediaURL || ""
-      }
+      try {
+        updates["people/" + key + "/timeline/" + newKey ] = {
+          date: firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
+          message: message || "",
+          mood: mood,
+          behaviors: self.state.behaviors,
+          mediaURL: mediaURL || "",
+          postedByPersonId: postedByPersonId,
+          postedByDisplayName: postedByDisplayName,
+          postedByPhotoURL: self.props.photoURL || "",
+          subjects: self.state.subjects
+        }
+      } catch(x) {console.log(x)}
 
-      if (mood) {
-        updates["people/" + key + "/mood/" + newKey ] = {
-          date: firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
-          message: message || "",
-          mood: mood,
-          behavior: behavior,
-          mediaURL: mediaURL ||""
+      try {
+        if (mood) {
+          updates["people/" + key + "/mood/" + newKey ] = {
+            date: firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
+            message: message || "",
+            mood: mood,
+            behaviors: self.state.behaviors,
+            mediaURL: mediaURL ||"",
+            postedByPersonId: postedByPersonId,
+            postedByDisplayName: postedByDisplayName
+          }
         }
-      }
-      if (behavior) {
-        updates["people/" + key + "/behavior/" + newKey ] = {
-          date: firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
-          message: message || "",
-          mood: mood,
-          behavior: behavior,
-          mediaURL: mediaURL || ""
-        }
-      }
+      } catch(x) {console.log(x)}
+
+
+      try {
+        Object.keys(this.state.behaviors).map(key => {
+          let behavior = this.state.behaviors[key]
+          if (behavior.value) {
+            updates["people/" + key + "/behavior/" + newKey ] = {
+              date: firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
+              message: message || "",
+              mood: mood,
+              behavior: behavior,
+              mediaURL: mediaURL || "",
+              postedByPersonId: postedByPersonId,
+              postedByDisplayName: postedByDisplayName
+
+            }
+          }
+        })
+      } catch(x) {console.log(x)}
+
+
       firebase
       .database()
       .ref()
       .update(updates)
 
+      try {
+        // clear out the form
+      } catch(x) {
+
+      }
     }
 
   }
@@ -107,19 +159,12 @@ class Add extends React.Component {
 
     this.state.moods.forEach(
       (m) => {
-        if(m.selected) {
+        if(!mood && m.selected) {
           mood = m.value
         }
       }
     )
-    this.state.behaviors.forEach(
-      (b) => {
-        if(b.selected) {
-          behavior=b.value
-          category = b.category
-        }
-      }
-    )
+
 
     const newKey = firebase
     .database()
@@ -142,7 +187,8 @@ class Add extends React.Component {
             console.log('Uploaded', snapshot.totalBytes, 'bytes.');
             console.log(snapshot.metadata);
             var url = snapshot.metadata.downloadURLs[0];
-            self._pushUpdates(self.props.viewPersonId, newKey,message || "" , mood, behavior, url)
+            self._pushUpdates(self.props.viewPersonId, newKey,message || "" , mood,  url,
+            self.props.personId, self.props.displayName, self.props.photoURL)
             console.log('File available at', url);
           })
           .catch(function(error) {
@@ -151,7 +197,8 @@ class Add extends React.Component {
             // [END onfailure]
           });
       } else {
-        self._pushUpdates(this.props.viewPersonId, newKey,message || "" , mood, behavior, "")
+        self._pushUpdates(this.props.viewPersonId, newKey,message || "" , mood, "",
+        self.props.personId, self.props.displayName, self.props.photoURL)
 
       }
     } catch(x) {
@@ -161,50 +208,62 @@ class Add extends React.Component {
 
 
     let d = new Date()
+    try {
+      if (mood) {
+        incAll("/people/" + this.props.viewPersonId + "/stats/mood", mood.toString())
+        incYear("/people/" + this.props.viewPersonId + "/stats/mood", mood.toString())
+        incMonth("/people/" + this.props.viewPersonId + "/stats/mood", mood.toString())
+        incDate("/people/" + this.props.viewPersonId + "/stats/mood", mood.toString())
+      }
+    } catch(x) {console.log(x)}
 
-    if (mood) {
-      incAll("/people/" + this.props.viewPersonId + "/stats/mood", mood.toString())
-      incYear("/people/" + this.props.viewPersonId + "/stats/mood", mood.toString())
-      incMonth("/people/" + this.props.viewPersonId + "/stats/mood", mood.toString())
-      incDate("/people/" + this.props.viewPersonId + "/stats/mood", mood.toString())
-    }
 
-    if (behavior) {
-      incAll("/people/" + this.props.viewPersonId + "/stats/behavior", behavior.toString())
-      incYear("/people/" + this.props.viewPersonId + "/stats/behavior", behavior.toString())
-      incMonth("/people/" + this.props.viewPersonId + "/stats/behavior", behavior.toString())
-      incDate("/people/" + this.props.viewPersonId + "/stats/behavior", behavior.toString())
+    try {
+      Object.keys(this.state.behaviors).map(key => {
+        let behavior = this.state.behaviors[key]
+        if (behavior.value!==0) {
 
-      incAll("/people/" + this.props.viewPersonId + "/stats/behaviors", category)
-      incYear("/people/" + this.props.viewPersonId + "/stats/behaviors", category)
-      incMonth("/people/" + this.props.viewPersonId + "/stats/behaviors", category)
-      incDate("/people/" + this.props.viewPersonId + "/stats/behaviors", category)
+          incAll("/people/" + this.props.viewPersonId + "/stats/behavior", key, behavior.value )
+          incYear("/people/" + this.props.viewPersonId + "/stats/behavior", key, behavior.value )
+          incMonth("/people/" + this.props.viewPersonId + "/stats/behavior", key, behavior.value )
+          incDate("/people/" + this.props.viewPersonId + "/stats/behavior", key, behavior.value )
+          incWeek("/people/" + this.props.viewPersonId + "/stats/behavior", key, behavior.value )
 
-    }
-    // this.props.addTimeLineEntry(this.state.message, mood, behavior, mediaURL)
-    this.setState({
-      message:"",
-      behaviors: this.state.behaviors.map(
-        (b) => {
-          b.style=b.defaultStyle
-          b.selected=false
-          return b
+          category = behavior.value > 0 ? "green" : "red"
+
+          incAll("/people/" + this.props.viewPersonId + "/stats/behaviors", category, behavior.value)
+          incYear("/people/" + this.props.viewPersonId + "/stats/behaviors", category, behavior.value)
+          incMonth("/people/" + this.props.viewPersonId + "/stats/behaviors", category, behavior.value)
+          incDate("/people/" + this.props.viewPersonId + "/stats/behaviors", category, behavior.value)
+          incWeek("/people/" + this.props.viewPersonId + "/stats/behaviors", category, behavior.value)
         }
-      ),
-      moods: this.state.moods.map(
-        (b) => (
-          {
-            ...b,
-            style: b.defaultStyle,
-            selected: false
-          }
-        )
-
-      ),
+      })
+    } catch(x) {console.log(x)}
 
 
-    })
-    self.preview.src=""
+
+    try {
+      let resetToState = {...self._initialState(self.props)}
+      resetToState.subjects = resetToState.subjects.map(
+        s => {
+          s.options = s.options.map(
+            o => ({...o, checked: false})
+          )
+          return s
+
+        }
+      )
+
+      Object.keys(resetToState.behaviors).map(key => {
+        resetToState.behaviors[key].value=0
+      })
+
+
+      console.log('resetting state to ',resetToState )
+      self.setState(resetToState)
+      self.preview.src=""
+
+    } catch(x) {console.log(x)}
 
   }
   _selectMood(w) {
@@ -224,23 +283,41 @@ class Add extends React.Component {
       )
     })
   }
-  _selectBehavior(w) {
-      this.setState({
-        behaviors: this.state.behaviors.map(
-          (b) => {
-            if (w==b.value) {
-              b.selected = !b.selected
-              b.style= b.selected ? b.defaultStyle + " selected " : b.defaultStyle
-            } else {
-              b.style = b.defaultStyle
-              b.selected=false
-            }
-            return b
+  _selectSubject(id, option) {
+    this.setState({
+      subjects: this.state.subjects.map(
+        (subject,i) => {
+          if (subject.id==id) {
+            let s = subject
+            s.options = s.options.map(
+              (opt,j) => ({...opt, checked: opt.value==option?!opt.checked:opt.checked })
+            )
+            return s
+          } else {
+            return subject
           }
-        )
-      })
-
+        }
+      )
+    })
   }
+
+  // _selectBehavior(w) {
+  //     this.setState({
+  //       behaviors: this.state.behaviors.map(
+  //         (b) => {
+  //           if (w==b.value) {
+  //             b.selected = !b.selected
+  //             // b.style= b.selected ? b.defaultStyle + " selected " : b.defaultStyle
+  //           } else {
+  //             // b.style = b.defaultStyle
+  //             b.selected=false
+  //           }
+  //           return b
+  //         }
+  //       )
+  //     })
+  //
+  // }
 
   render() {
     return (
@@ -280,31 +357,35 @@ class Add extends React.Component {
           </div>
           <div className="form-group">
             <label>Behavior</label>
-            <div className="btn-toolbar">
-
-              { this.state.behaviors.map(
-                (b,i) => {
-                  if (b.value) {
-                    return (
-                      <div className="btn-group" key={i}>
-                        <button key={i} className={b.style}
-                          role="button" onClick={ (e)=>this._selectBehavior(b.value)}>
-                            {b.caption }
-                            { }
-                            &nbsp;
-                            {
-                              b.selected &&
-                                  <i className="fa fa-check" aria-hidden="true"></i>
-                            }
-                        </button>
-                      </div>
-
-                    )
-                  }
-                }
-              )}
-            </div>
+            <AddBehavior behaviors={this.state.behaviors} onChange={this._selectBehavior} />
           </div>
+            <br/>
+            <div className="form-group">
+              <label>Subjects</label>
+                {
+                  this.state.subjects.map(
+                    (subject, i) => (
+                      <div className="row" key={i}>
+                        <div className='col-xs-4'>
+                          {subject.caption} &nbsp;
+                        </div>
+                        <div className='col-xs-8'>
+                          {
+                            subject.options.map( (opt, j) => (
+                              <span key={j}>
+                                <input type="checkbox" value={opt.value} checked={opt.checked}
+                                  onChange={ e => this._selectSubject(subject.id, opt.value) }
+                                /> {opt.caption} &nbsp;
+                              </span>
+
+                            ))
+                          }
+                        </div>
+                      </div>
+                    )
+                  )
+                }
+            </div>
           <div className="form-group">
             <label>photo/video</label>
             <label htmlFor="upload" className="form-control">
@@ -331,7 +412,11 @@ export default connect(
     log('connecting state ', state)
     return {
       user: state.auth.user,
-      viewPersonId: state.auth.viewPersonId
+      viewPersonId: state.auth.viewPersonId,
+      personId: state.auth.personId,
+      displayName: state.auth.displayName,
+      photoURL: state.auth.photoURL,
+      list_behaviors: state.auth.list_behaviors
     }
   },
   {

@@ -19,7 +19,6 @@ export default class Login extends React.Component {
       .auth()
       .getRedirectResult()
       .then(function(result) {
-        console.log('in redirect result ', result)
         if (result && result.credential) {
           // This gives you a Google Access Token. You can use it to access the Google API.
           var token = result.credential.accessToken;
@@ -30,7 +29,6 @@ export default class Login extends React.Component {
       })
       .catch(function(error) {
         // Handle Errors here.
-        console.log('in redirect result ', error)
         var errorCode = error.code;
         var errorMessage = error.message;
         // The email of the user's account used.
@@ -54,14 +52,11 @@ export default class Login extends React.Component {
       return false
     }
 
-    console.log('login with email ...')
-
     firebase
     .auth()
     .createUserWithEmailAndPassword(this.email, this.password)
     .then(
       result => {
-        log('giddy up', result)
         this.props.onSuccess(result)
       }
     )

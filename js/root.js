@@ -45,7 +45,6 @@ class Root extends React.Component {
 
     this.state = {
     }
-    console.log('in root component')
   }
 
 

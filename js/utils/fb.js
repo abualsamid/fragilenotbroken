@@ -1,5 +1,5 @@
 
-function inc(base, index, stat) {
+function inc(base, index, stat, delta=1) {
 
   let key = base + "/" + index + "/" + stat
 
@@ -7,30 +7,52 @@ function inc(base, index, stat) {
   .database()
   .ref(key)
   .transaction(
-    current => 1 + (isNaN(current)||!isFinite(current)?0:current)
+    current => delta + (isNaN(current)||!isFinite(current)?0:current)
   )
 }
 
-function incAll(base, index) {
-  inc(base, index, "all")
+function incAll(base, index, delta=1) {
+  inc(base, index, "all", delta)
 }
 
-function incYear(base, index) {
+function incYear(base, index, delta=1) {
   let d = new Date()
-  inc(base, index, d.getFullYear().toString() )
+  inc(base, index, "year/" + getYear(), delta )
 }
 
-function incMonth(base, index)
+function incMonth(base, index, delta=1)
 {
-  let d = new Date()
-  inc(base, index, d.getFullYear().toString() + "-" + (1+d.getMonth()).toString() )
+  inc(base, index, "month/" + getMonth() , delta)
 }
 
-function incDate(base, index)
+function incWeek(base, index, delta=1) {
+  inc(base, index, "week/" + getWeek() , delta)
+
+}
+function incDate(base, index, delta=1)
 {
-  let d = new Date()
-  inc(base, index, d.getFullYear().toString() + "-" + (1+d.getMonth()).toString() + "-" + d.getDate().toString() )
+  inc(base, index, "date/" + getDate(), delta )
+}
+
+function getWeek(d) {
+
+  d = d || new Date()
+  d.setDate(d.getDate() - d.getDay() +1)
+  return d.getFullYear().toString() + "-" + (1+d.getMonth()).toString() + "-" + d.getDate().toString()
 }
 
 
-export { inc, incAll, incYear, incMonth, incDate  }
+
+function getDate(d) {
+  d = d || new Date()
+  return  d.getFullYear().toString() + "-" + (1+d.getMonth()).toString() + "-" + d.getDate().toString()
+}
+
+const getMonth = (d) => {
+  d = d || new Date()
+  return d.getFullYear().toString() + "-" + (1+d.getMonth()).toString()
+}
+
+const getYear = (d) => ( (d||new Date()).getFullYear().toString()  )
+
+export { inc, incAll, incYear, incMonth, incDate, incWeek, getWeek, getMonth, getDate, getYear  }
