@@ -212,7 +212,6 @@ class Students extends React.Component {
 
     }
     e.preventDefault();
-    console.log('selecting ...')
     var file = e.target.files[0];
     console.log('selected ', file)
     if (file) {

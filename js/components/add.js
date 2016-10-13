@@ -9,6 +9,7 @@ import AddBehavior from './addBehavior'
 
 class Add extends React.Component {
   _initialState(props) {
+    const d = new Date()
     return {
      moods: [
        {
@@ -40,7 +41,10 @@ class Add extends React.Component {
      ],
      behaviors: {...props.list_behaviors},
      subjects: subjects,
-     message: ""
+     message: "",
+     list_activity: [],
+     activityId: "",
+     activityTimeStamp: d.getHours() + ":" + d.getMinutes()
    }
   }
 
@@ -52,10 +56,40 @@ class Add extends React.Component {
     this._pushUpdates=this._pushUpdates.bind(this)
     this._selectSubject=this._selectSubject.bind(this)
     this._selectBehavior=this._selectBehavior.bind(this)
-
+    this._loadData=this._loadData.bind(this)
     this.state=this._initialState(props)
   }
 
+  componentDidMount() {
+    this._loadData(this.props)
+    const d = new Date()
+    this.setState({activityTimeStamp: d.getHours() + ":" + d.getMinutes()})
+  }
+  componentWillReceiveProps(props) {
+    this._loadData(props)
+    const d = new Date()
+    this.setState({activityTimeStamp: d.getHours() + ":" + d.getMinutes()})
+  }
+
+  _loadData(props) {
+    const self = this
+    firebase
+    .database()
+    .ref("people/" + props.viewPersonId + "/list_activity")
+    .on("value",
+      (snapshot) => {
+        console.log('got snapshot from list_activity ',snapshot, props.viewPersonId, snapshot.val())
+        let all = []
+        if (snapshot && snapshot.val()) {
+          for(var key in snapshot.val()) {
+            all.unshift( { key: key, caption:snapshot.val()[key] } )
+          }
+        }
+        console.log('setting list_activity to ', all )
+        self.setState({list_activity: all})
+      }
+    )
+  }
   _previewFile() {
     const self = this
     try {
@@ -82,14 +116,45 @@ class Add extends React.Component {
 
 
   }
-  _pushUpdates(key, newKey, message, mood, mediaURL, postedByPersonId,postedByDisplayName) {
+
+  _pushUpdates(key, newKey, message, mood, mediaURL, postedByPersonId,postedByDisplayName,photoURL, activityId) {
     const self = this
+    let hasTimeStamp = false
+    let timeStamp = new Date()
+    if (this.state.activityTimeStamp) {
+      try {
+        timeStamp.setHours(this.state.activityTimeStamp.split(":")[0])
+        timeStamp.setMinutes(this.state.activityTimeStamp.split(":")[0])
+        hasTimeStamp=true
+      } catch(x){console.log(x)}
+    }
     if (true ) {
+      try {
+        if (activityId) {
+          let activity=this.state.list_activity.reduce( (previous, current, index,array) => {
+            console.log('prev:', previous,'current ', current,'index ... ' , index,' array ', array, ' activityId ', activityId)
+            if(activityId==current.key) {
+              return current.caption
+            }
+            return previous
+          },"" )
+
+          console.log('setting activity ', activity)
+          if(message) {
+            message = activity + ". " + message
+          } else {
+            message=activity
+          }
+        }
+      } catch(x) {
+        console.log(x)
+      }
+
       let updates = {}
       const self = this
       try {
         updates["people/" + key + "/timeline/" + newKey ] = {
-          date: firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
+          date: hasTimeStamp ? timeStamp.getTime() : firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
           message: message || "",
           mood: mood,
           behaviors: self.state.behaviors,
@@ -97,14 +162,15 @@ class Add extends React.Component {
           postedByPersonId: postedByPersonId,
           postedByDisplayName: postedByDisplayName,
           postedByPhotoURL: self.props.photoURL || "",
-          subjects: self.state.subjects
+          subjects: self.state.subjects,
+          activityId: self.state.activityId
         }
       } catch(x) {console.log(x)}
 
       try {
         if (mood) {
           updates["people/" + key + "/mood/" + newKey ] = {
-            date: firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
+            date: hasTimeStamp ? timeStamp.getTime() : firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
             message: message || "",
             mood: mood,
             behaviors: self.state.behaviors,
@@ -121,7 +187,7 @@ class Add extends React.Component {
           let behavior = this.state.behaviors[key]
           if (behavior.value) {
             updates["people/" + key + "/behavior/" + newKey ] = {
-              date: firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
+              date: hasTimeStamp ? timeStamp.getTime() : firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
               message: message || "",
               mood: mood,
               behavior: behavior,
@@ -150,7 +216,6 @@ class Add extends React.Component {
   }
   _add() {
     const self = this
-    log('doing it.')
     let mood = 0
     let behavior = 0
     let mediaURL = ""
@@ -188,7 +253,7 @@ class Add extends React.Component {
             console.log(snapshot.metadata);
             var url = snapshot.metadata.downloadURLs[0];
             self._pushUpdates(self.props.viewPersonId, newKey,message || "" , mood,  url,
-            self.props.personId, self.props.displayName, self.props.photoURL)
+            self.props.personId, self.props.displayName, self.props.photoURL, self.state.activityId)
             console.log('File available at', url);
           })
           .catch(function(error) {
@@ -198,7 +263,7 @@ class Add extends React.Component {
           });
       } else {
         self._pushUpdates(this.props.viewPersonId, newKey,message || "" , mood, "",
-        self.props.personId, self.props.displayName, self.props.photoURL)
+        self.props.personId, self.props.displayName, self.props.photoURL, self.state.activityId)
 
       }
     } catch(x) {
@@ -253,11 +318,11 @@ class Add extends React.Component {
 
         }
       )
+      resetToState.list_activity = [].concat(this.state.list_activity)
 
       Object.keys(resetToState.behaviors).map(key => {
         resetToState.behaviors[key].value=0
       })
-
 
       console.log('resetting state to ',resetToState )
       self.setState(resetToState)
@@ -323,6 +388,22 @@ class Add extends React.Component {
     return (
       <div style={{ backgroundColor: "white", padding:"2em" }}>
         <form onSubmit={(e)=> {e.preventDefault(); return false;}}>
+          <div className="form-group">
+            <label>Time</label>
+            <input type="time" className="form-control" value={this.state.activityTimeStamp}
+              onChange={ e => { console.log(e.target.value); this.setState({activityTimeStamp: e.target.value }) } }
+               />
+          </div>
+          <div className="form-group">
+            <label>Activity</label>
+            <select className="form-control" value={this.state.activityId}
+              onChange={ e => this.setState( {activityId: e.target.value} ) }>
+              <option value=""></option>
+              {
+                this.state.list_activity.map( (item,i) => (<option key={item.key} value={item.key}>{ item.caption }</option>) )
+              }
+            </select>
+          </div>
           <div className="form-group">
             <label>
               what is happening?

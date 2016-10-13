@@ -25,33 +25,51 @@ class TimeLine extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
-      timeline:[]
+      timeline:[],
+    }
+    this._loadPerson = this._loadPerson.bind(this)
+  }
+
+  _loadPerson(viewPersonId) {
+    const self = this
+    try {
+      firebase
+      .database()
+      .ref("people/" + viewPersonId + "/timeline")
+      .on("value",
+        (snapshot) => {
+          let all = []
+          if (snapshot && snapshot.val()) {
+            for(var key in snapshot.val()) {
+              all.unshift(snapshot.val()[key])
+            }
+          }
+          self.setState({timeline: all})
+        }
+      )
+    } catch(x) {
+      console.log(x)
     }
   }
-  
+
   componentDidMount() {
     const self = this
     try {
       if(self.props && self.props.viewPersonId ) {
-        firebase
-        .database()
-        .ref("people/" + this.props.viewPersonId + "/timeline")
-        .on("value",
-          (snapshot) => {
-            let all = []
-            for(var key in snapshot.val()) {
-              all.unshift(snapshot.val()[key])
-            }
-            self.setState({timeline: all})
-          }
-        )
+        this._loadPerson(this.props.viewPersonId)
       }
-    } catch(x) {
-      console.log(x)
-    }
-
-
+    } catch(x) {console.log(x)}
   }
+
+  componentWillReceiveProps(props) {
+    const self = this
+    try {
+      if(props && props.viewPersonId) {
+        this._loadPerson(props.viewPersonId)
+      }
+    } catch(x) {console.log(x)}
+  }
+
   render() {
     function mood(m) {
       switch(m) {
