@@ -1,10 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { connect } from 'react-redux'
-import Login from './async';
-import Navbar from './components/navBar'
-import Add from './components/add'
-import TimeLine from './components/timeLine'
+import Navbar from './navBar'
+import Add from './add'
+import TimeLine from './timeLine'
 
 Date.daysBetween = function( date1, date2 ) {
   //Get 1 day in milliseconds

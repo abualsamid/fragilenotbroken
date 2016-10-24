@@ -6,7 +6,7 @@ import Login from './login';
 import Navbar from './components/navBar'
 import { connect } from 'react-redux'
 import {  browserHistory, Link } from 'react-router';
-import log from './log'
+import log from './utils/log'
 
 // Initialize Firebase
 var config = {

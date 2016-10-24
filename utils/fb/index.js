@@ -7,7 +7,7 @@ function inc(base, index, stat, delta=1) {
   .database()
   .ref(key)
   .transaction(
-    current => delta + (isNaN(current)||!isFinite(current)?0:current)
+    current => delta + ( (isNaN(current)||!isFinite(current)) ? 0 :current)
   )
 }
 

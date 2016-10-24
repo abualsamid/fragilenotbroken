@@ -1,5 +1,5 @@
 import React from 'react';
-import log from './log'
+import log from '../utils/log'
 
 export default class Login extends React.Component {
   constructor(props) {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux'
-import log from './log'
+import log from './utils/log'
 import {getWeek, getYear, getMonth, getDate} from './utils/fb'
 
 class D extends React.Component {
@@ -16,10 +16,6 @@ class D extends React.Component {
       filter: "all",
       allStats : {}
     }
-
-    require.ensure([], (require) => {
-      var log = require('./log')
-    })
 
     try {
       log('inside Dashboard constructor')

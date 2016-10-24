@@ -17,10 +17,6 @@ export default class AddBehavior extends React.Component {
     this._select = this._select.bind(this)
   }
 
-
-
-
-
   _isSelected(key,dir) {
     if (!this.state.behaviors[key] || this.state.behaviors[key].value==0) {
       return "fa fa-square-o"

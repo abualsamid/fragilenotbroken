@@ -19,7 +19,7 @@ var plugins = [
     }),
 
   new HtmlWebpackPlugin({
-    title: 'My Log',
+    title: 'Fragile Not Broken',
     filename: 'index.html',
     template: 'index.html'
   }),

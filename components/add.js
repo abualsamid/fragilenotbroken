@@ -3,11 +3,17 @@ import { connect } from 'react-redux'
 import log from '../utils/log'
 import behaviors, {redStyle, greenStyle, redStyleSelected, greenStyleSelected} from './behaviors'
 import subjects from './subjects'
-import {inc, incAll, incYear, incMonth, incDate, incWeek} from '../utils/fb'
+import {inc, incAll, incYear, incMonth, incDate, incWeek} from '../utils/fb/'
 import AddBehavior from './addBehavior'
 
 
 class Add extends React.Component {
+  _pad(v) {
+    if (v<10) {
+      return '0' + v;
+    }
+    return v;
+  }
   _initialState(props) {
     const d = new Date()
     return {
@@ -44,7 +50,7 @@ class Add extends React.Component {
      message: "",
      list_activity: [],
      activityId: "",
-     activityTimeStamp: d.getHours() + ":" + d.getMinutes()
+     activityTimeStamp: this._pad(d.getHours()) + ":" + this._pad(d.getMinutes())
    }
   }
 
@@ -58,17 +64,18 @@ class Add extends React.Component {
     this._selectBehavior=this._selectBehavior.bind(this)
     this._loadData=this._loadData.bind(this)
     this.state=this._initialState(props)
+    this._postButtonCaption = this._postButtonCaption.bind(this)
   }
 
   componentDidMount() {
     this._loadData(this.props)
     const d = new Date()
-    this.setState({activityTimeStamp: d.getHours() + ":" + d.getMinutes()})
+    this.setState({activityTimeStamp: this._pad(d.getHours()) + ":" + this._pad(d.getMinutes())  })
   }
   componentWillReceiveProps(props) {
     this._loadData(props)
     const d = new Date()
-    this.setState({activityTimeStamp: d.getHours() + ":" + d.getMinutes()})
+    this.setState({activityTimeStamp: this._pad(d.getHours()) + ":" + this._pad(d.getMinutes()) })
   }
 
   _loadData(props) {
@@ -183,21 +190,22 @@ class Add extends React.Component {
 
 
       try {
-        Object.keys(this.state.behaviors).map(key => {
-          let behavior = this.state.behaviors[key]
-          if (behavior.value) {
-            updates["people/" + key + "/behavior/" + newKey ] = {
-              date: hasTimeStamp ? timeStamp.getTime() : firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
-              message: message || "",
-              mood: mood,
-              behavior: behavior,
-              mediaURL: mediaURL || "",
-              postedByPersonId: postedByPersonId,
-              postedByDisplayName: postedByDisplayName
+        Object.keys(this.state.behaviors).map(
+          one => {
+            let behavior = this.state.behaviors[one]
+            if (behavior.value) {
+              updates["people/" + key + "/behavior/" + newKey ] = {
+                date: hasTimeStamp ? timeStamp.getTime() : firebase.database.ServerValue.TIMESTAMP, // new Date(timestamp).getTime();
+                message: message || "",
+                mood: mood,
+                behavior: behavior,
+                mediaURL: mediaURL || "",
+                postedByPersonId: postedByPersonId,
+                postedByDisplayName: postedByDisplayName
 
+              }
             }
-          }
-        })
+          })
       } catch(x) {console.log(x)}
 
 
@@ -480,12 +488,22 @@ class Add extends React.Component {
             <img  style={{width:"200px"}} ref={(e)=>{this.preview = e}} />
           </div>
           <div>
-            <button className="btn-block btn btn-primary" onClick={this._add}>Post</button>
+            <button className="btn-block btn btn-primary" onClick={this._add}>
+              {
+                this._postButtonCaption(this.props.personId, this.props.viewPersonId, this.props.viewPerson.displayName)
+              }
+            </button>
             <br/>
           </div>
         </form>
       </div>
     )
+  }
+  _postButtonCaption(personId, viewPersonId, displayName) {
+    if (personId==viewPersonId) {
+      return "Post to my own timeline"
+    }
+    return "Post to " + displayName
   }
 }
 export default connect(
@@ -494,6 +512,7 @@ export default connect(
     return {
       user: state.auth.user,
       viewPersonId: state.auth.viewPersonId,
+      viewPerson: state.auth.viewPerson,
       personId: state.auth.personId,
       displayName: state.auth.displayName,
       photoURL: state.auth.photoURL,

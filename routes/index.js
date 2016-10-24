@@ -8,18 +8,17 @@ if (typeof require.ensure !== 'function') require.ensure = (d, c) => c(require)
 
 export default {
   path: '/',
-  getComponents(nextState, cb) {
+  getComponent(nextState, cb) {
     // webpack will put it in a different "chunk" file
     // and load it when this gets called
     require.ensure([],
       require => {
-        cb(null, require('../App').default)
+        cb(null, require('../components/App').default)
       }
     )
   },
   getChildRoutes(partialNextState, cb) {
     require.ensure([], (require) => {
-      console.log('123')
       cb(null, [
         require('./dashboard').default,
         require('./addBehavior').default,
@@ -29,9 +28,9 @@ export default {
     })
   },
   getIndexRoute(partialNextState, callback) {
-    require.ensure([], function (require) {
+    require.ensure([], (require) => {
       callback(null, {
-        component: require('../root').default,
+        component: require('../components/root').default,
       })
     })
   }

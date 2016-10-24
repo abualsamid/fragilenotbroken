@@ -40,7 +40,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "NODE_ENV=development webpack-dev-server --host 0.0.0.0 --hot --inline --content-base dist --history-api-fallback --colors --port 2345 --watch",
     "build": "NODE_ENV=production webpack --progress --colors",
-    "deploy": "npm run build && firebase deploy"
+    "deploy": "npm run build && firebase deploy",
+    "backup": "firebase  database:get / | python -m json.tool > .database_backups/backup.json"
   },
   "keywords": [],
   "author": "",
