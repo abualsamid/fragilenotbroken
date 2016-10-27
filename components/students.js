@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom';
 import { connect } from 'react-redux'
 import { browserHistory } from 'react-router'
 import ReactSwipe from 'react-swipe';
+import { loadTimeline, offTimeLine, submitInterventionResponse,postViewPersonId } from '../utils/fb/timeline'
+import log from '../utils/log'
 
 var database = firebase.database();
 
@@ -62,13 +64,13 @@ class Students extends React.Component {
                   console.log(v, myInvite)
                   const now = (new Date()).getTime()
                   if (s.key==v && myInvite.acceptedOn==0 && myInvite.expires > now && !myInvite.personId) {
-                    let newFriend = database
-                                  .ref("people/" + self.props.personId + "/friends")
-                                  .push({
-                                    personId: friendId,
-                                    myRole: myInvite.role
-                                  })
-                                  .key
+                    database
+                    .ref("people/" + self.props.personId + "/friends/" + friendId)
+                    .set({
+                      personId: friendId,
+                      myRole: myInvite.role,
+                      timestamp: firebase.database.ServerValue.TIMESTAMP
+                    })
 
                     self.setState({inviteFeedback: "Your invite was processed" })
                     myInvite.acceptedOn = now
@@ -133,10 +135,12 @@ class Students extends React.Component {
       .push(self.props.personId)
 
       database
-      .ref("people/" + self.props.personId + "/friends")
-      .push({
+      .ref("people/" + self.props.personId + "/friends/" + newPersonId)
+      .set({
         myRole:"parent",
-        personId: newPersonId
+        personId: newPersonId,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+
       })
     } else {
       console.log('doh... no person ID attached at login.')
@@ -144,7 +148,12 @@ class Students extends React.Component {
 
   }
   _select(person) {
-    this.props.selectViewPerson(person)
+    const self = this
+    self.props.selectViewPerson(person)
+    postViewPersonId(self.props.user.uid, person.key)
+    const viewPersonId = person.key
+
+
     setTimeout(browserHistory.push("/dashboard"), 100)
   }
 
@@ -308,7 +317,7 @@ class Students extends React.Component {
 
 
         <div>
-          <h2>Friends</h2>
+          <h2>People</h2>
           <br/>
               {
                 this.state.people &&
@@ -444,7 +453,7 @@ export default connect(
     selectViewPerson: (person) => ({
       type:"selectViewPerson",
       person: person
-    }),
+    })
 
   }
 

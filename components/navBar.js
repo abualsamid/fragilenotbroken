@@ -1,14 +1,19 @@
 import React from 'react';
 import { Link, IndexLink } from 'react-router'
 import { connect } from 'react-redux'
-
+import log  from '../utils/log'
 
 class Nav extends React.Component {
   constructor(props) {
     super(props)
+    log('navbar ', props )
+  }
+  componentWillReceiveProps(props) {
+    log('navbar:: got new props', props )
   }
   render() {
     const self = this
+    log('navbar:: in render ')
     return (
       <nav className="navbar navbar-default navbar-fixed-top">
         <div className="container">

@@ -2,7 +2,7 @@ import React from 'react';
 import { connect } from 'react-redux'
 import _ from 'lodash'
 import behaviors, {redStyle, greenStyle, redStyleSelected, greenStyleSelected} from './behaviors'
-import { loadTimeline, offTimeLine, submitInterventionResponse } from '../utils/fb/timeline'
+import {  submitInterventionResponse } from '../utils/fb/timeline'
 import  log  from '../utils/log'
 import Intervention from './interventions'
 import { getTodaysRed } from '../utils/fb/timeline'
@@ -78,7 +78,6 @@ const DisplayInterventions = (viewPersonId, one,interventionKey,red,timestamp, c
           </button>
       </div>
     </div>
-
   )
 }
 
@@ -88,50 +87,15 @@ class TimeLine extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
-      timeline:[],
       interventionKey: ""
     }
-    this._loadPersonTimeline = this._loadPersonTimeline.bind(this)
     this._selectIntervention = this._selectIntervention.bind(this)
   }
 
-  _loadPersonTimeline(viewPersonId) {
-    const self = this
-    try {
-      loadTimeline(viewPersonId,
-        e => {
-          if (e && e.val()) {
-            this.setState({timeline: e.val()})
-          }
-        }
-      )
 
-    } catch(x) {
-      console.log(x)
-    }
-  }
 
-  componentWillUnmount() {
-      offTimeLine(this.props.viewPersonId)
-  }
 
-  componentDidMount() {
-    const self = this
-    try {
-      if(self.props && self.props.viewPersonId ) {
-        this._loadPersonTimeline(this.props.viewPersonId)
-      }
-    } catch(x) {console.log(x)}
-  }
 
-  // componentWillReceiveProps(props) {
-  //   const self = this
-  //   try {
-  //     if(props && props.viewPersonId) {
-  //       this._loadPersonTimeline(props.viewPersonId)
-  //     }
-  //   } catch(x) {console.log(x)}
-  // }
 
   _selectIntervention(chosen, timestamp) {
     const self = this
@@ -158,17 +122,21 @@ class TimeLine extends React.Component {
           return <img src="img/happy.svg" style={{width:"25px", marginRight:"1em"}} />
         case 3:
           return <img src="img/crying.svg" style={{width:"25px", marginRight:"1em"}} />
-
-
       }
     }
-
+    log('redux timeline ', this.props.timeLine)
+    if(!this.props.timeLine) {
+      return <div>.</div>
+    }
+    if(!this.props.timeLine[this.props.viewPersonId]) {
+      return <div>..</div>
+    }
     return (
       <div>
         {
-          _.reverse(Object.keys(this.state.timeline)).map(
+          _.reverse(Object.keys(this.props.timeLine[this.props.viewPersonId])).map(
             (one, i ) => {
-              const e = this.state.timeline[one]
+              const e = this.props.timeLine[this.props.viewPersonId][one]
               return (
                 <div key={i} style={ {padding:"1em",marginBottom:"1em",
                               marginTop:"1em", border:"1px solid gray",
@@ -196,7 +164,6 @@ class TimeLine extends React.Component {
                           {mood(e.mood)}
                         </div>
                       </div>
-
                     </div>
                     <br/>
                     <div className="row">
@@ -230,7 +197,6 @@ class TimeLine extends React.Component {
         }
       </div>
     )
-
   }
 }
 
@@ -240,7 +206,8 @@ export default connect(
     return {
       user: state.auth.user,
       viewPersonId: state.auth.viewPersonId,
-      viewPerson: state.auth.viewPerson
+      viewPerson: state.auth.viewPerson,
+      timeLine: state.auth.timeLine
     }
   }
 )(TimeLine)

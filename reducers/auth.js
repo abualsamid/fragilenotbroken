@@ -1,4 +1,4 @@
-
+import log from '../utils/log'
 const initialState = {
   user: null,
   isAuthenticated: false,
@@ -10,7 +10,9 @@ const initialState = {
   viewPerson: null,
   displayName: "",
   photoURL: "",
-  list_behaviors: {}
+  list_behaviors: {},
+  timeLine: {},
+  isLoading: false
 }
 
 
@@ -30,13 +32,25 @@ export default function auth(state = initialState, action) {
                 viewPersonId: action.viewPersonId,
                 viewPerson: action.viewPerson
               }
+    case "loadTimeLine":
+      log('loading timeline ', action )
+      var f = {...state.timeLine }
+      f[action.viewPersonId] = action.timeLine
+      return {
+        ...state,
+        timeLine: f
+      }
     case "auth":
       return { ...state, user: action.user, isAuthenticated: action.isAuthenticated}
     case "selectViewPerson":
+      log('reducing selectViewPerson ', action, action.person.key, action.person.val())
       return { ...state, viewPersonId: action.person.key, viewPerson: action.person.val()}
     case "onListBehaviors":
-      console.log('reducing ',action.list_behaviors)
       return { ...state, list_behaviors: action.list_behaviors}
+    case "isLoading" :
+      return { ...state, isLoading: true }
+    case "doneLoading": 
+      return { ...state, isLoading: false }
     case "logout":
       return initialState
   }

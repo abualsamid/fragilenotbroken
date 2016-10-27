@@ -85,14 +85,12 @@ class Add extends React.Component {
     .ref("people/" + props.viewPersonId + "/list_activity")
     .on("value",
       (snapshot) => {
-        console.log('got snapshot from list_activity ',snapshot, props.viewPersonId, snapshot.val())
         let all = []
         if (snapshot && snapshot.val()) {
           for(var key in snapshot.val()) {
             all.unshift( { key: key, caption:snapshot.val()[key] } )
           }
         }
-        console.log('setting list_activity to ', all )
         self.setState({list_activity: all})
       }
     )
@@ -508,7 +506,6 @@ class Add extends React.Component {
 }
 export default connect(
   (state, ownProps) => {
-    log('connecting state ', state)
     return {
       user: state.auth.user,
       viewPersonId: state.auth.viewPersonId,

@@ -8,24 +8,25 @@ import throttle from 'lodash/throttle';
 import { loadState, saveState } from './utils/localStorage';
 import reducers from './reducers'
 import Routes from './routes/'
-
+import init from './utils/fb/init'
 
 const persistedState = loadState();
 
 // Add the reducer to your store on the `routing` key
 const store = createStore(
-  reducers   ,
-  persistedState
+  reducers //   ,
+  // persistedState
 )
 
 
-store.subscribe(throttle(() => {
-  saveState(store.getState());
-}, 1000));
+// store.subscribe(throttle(() => {
+//   saveState(store.getState());
+// }, 1000));
 
 // Create an enhanced history that syncs navigation events with the store
 const history = syncHistoryWithStore(browserHistory, store)
 
+init(store)
 
 render(
   (

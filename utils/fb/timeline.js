@@ -1,18 +1,5 @@
 import {getDate} from './index'
-
-export const loadTimeline = (viewPersonId,cb) => {
-
-  try {
-      const root = `/people/${viewPersonId}/timeline`
-      firebase
-      .database()
-      .ref(root)
-      .limitToLast(50)
-      .on("value",cb)
-    } catch(x) {
-      console.log(x)
-    }
-}
+import log from '../log'
 
 export const submitInterventionResponse = (viewPersonId, timeLineId, response) => {
   const root = `/interventions/${viewPersonId}/${timeLineId}`
@@ -30,6 +17,23 @@ export const offTimeLine = (viewPersonId) => {
   firebase.database().ref(root).off()
 }
 
+export const postViewPersonId = (uid, viewPersonId) => {
+  const key=`/state/${uid}/viewPersonId`
+  firebase
+  .database()
+  .ref(key)
+  .transaction(
+    current => {
+      if(current) {
+        log('currently viewPersonId: ', current)
+        try {
+          offTimeLine(current)
+        } catch(x) {console.log(x)}
+      }
+      return viewPersonId
+    }
+  )
+}
 
 export const getTodaysRed = (viewPersonId, timestamp, cb ) => {
   try {
