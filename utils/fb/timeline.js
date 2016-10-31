@@ -25,12 +25,11 @@ export const postViewPersonId = (uid, viewPersonId) => {
   .transaction(
     current => {
       if(current) {
-        log('currently viewPersonId: ', current)
         try {
           offTimeLine(current)
         } catch(x) {console.log(x)}
       }
-      return viewPersonId
+      return viewPersonId || current
     }
   )
 }

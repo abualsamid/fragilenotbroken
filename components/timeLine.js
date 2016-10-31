@@ -7,6 +7,11 @@ import  log  from '../utils/log'
 import Intervention from './interventions'
 import { getTodaysRed } from '../utils/fb/timeline'
 
+const SECOND = 1000
+const MINUTE = 60*SECOND
+const HOUR = 60*MINUTE
+const DAY = 24*HOUR
+
 const Media = ({src}) => {
   const u= src.split('?')[0]
   switch(u.split('.').pop().toLowerCase()) {
@@ -52,9 +57,28 @@ const Behavior = b => (
   </div>
 )
 
+const InterventionResult = i => {
+  if (!i) {
+    return null
+  }
+  const one = i[Object.keys(i)[0]]
+  const values = ["No Change", "Stopped Red Thought", "Shorter/Milder", "Longer/Stronger"]
+  return (
+    <div className="row">
+      <hr style={{color:"black", borderTop: "1px solid black"}}/>
+      <div className="col-xs-12 col-md-12">
+          <strong>intervention</strong> @ {new Date(one.timestamp).toString()} => {values[one.response]}
+      </div>
+    </div>
+  )
+}
+
 
 const DisplayInterventions = (viewPersonId, one,interventionKey,red,timestamp, cb) => {
 
+  if(timestamp < (Date.now()-DAY)  ) {
+    return null
+  }
   if (one==interventionKey) {
     return (
       <div className="row">
@@ -94,9 +118,6 @@ class TimeLine extends React.Component {
 
 
 
-
-
-
   _selectIntervention(chosen, timestamp) {
     const self = this
 
@@ -108,6 +129,13 @@ class TimeLine extends React.Component {
     } else {
       this.setState({interventionKey: "", red: 0 })
     }
+
+  }
+  componentWillReceiveProps() {
+    log('timeline: componentWillReceiveProps')
+  }
+  componentDidMount() {
+    log('timeline: componentDidMount')
 
   }
   render() {
@@ -124,24 +152,20 @@ class TimeLine extends React.Component {
           return <img src="img/crying.svg" style={{width:"25px", marginRight:"1em"}} />
       }
     }
-    log('redux timeline ', this.props.timeLine)
     if(!this.props.timeLine) {
       return <div>.</div>
     }
-    if(!this.props.timeLine[this.props.viewPersonId]) {
-      return <div>..</div>
-    }
+    log('rendering timeline ')
     return (
       <div>
         {
-          _.reverse(Object.keys(this.props.timeLine[this.props.viewPersonId])).map(
+          _.reverse(Object.keys(this.props.timeLine)).map(
             (one, i ) => {
-              const e = this.props.timeLine[this.props.viewPersonId][one]
+              const e = this.props.timeLine[one]
               return (
                 <div key={i} style={ {padding:"1em",marginBottom:"1em",
                               marginTop:"1em", border:"1px solid gray",
-                              backgroundColor: i%2?"white":"#eee" }
-                }>
+                              backgroundColor: i%2?"white":"#eee" } }>
                   <div key={e.date || i }>
                     <div className="row">
                       <div className="col-xs-3 col-md-1">
@@ -189,6 +213,13 @@ class TimeLine extends React.Component {
                     {
                       DisplayInterventions(self.props.viewPersonId, one, this.state.interventionKey,this.state.red, e.date,this._selectIntervention)
                     }
+
+                    {
+                      this.props.interventions
+                      && this.props.interventions[one]
+                      && InterventionResult(this.props.interventions[one])
+
+                    }
                   </div>
                 </div>
               )
@@ -207,7 +238,9 @@ export default connect(
       user: state.auth.user,
       viewPersonId: state.auth.viewPersonId,
       viewPerson: state.auth.viewPerson,
-      timeLine: state.auth.timeLine
+      timeLine: state.auth.timeLine[state.auth.viewPersonId],
+      interventions: state.auth.interventions[state.auth.viewPersonId] || {},
+      timestamp: state.auth.timestamp 
     }
   }
 )(TimeLine)

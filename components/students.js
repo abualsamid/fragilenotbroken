@@ -21,6 +21,7 @@ class Students extends React.Component {
     this._acceptInvite=this._acceptInvite.bind(this)
 
     this._select = this._select.bind(this)
+    this._selectMe = this._selectMe.bind(this)
     this._selectPic = this._selectPic.bind(this)
     this._invite = this._invite.bind(this)
     this._calcInviteKey=this._calcInviteKey.bind(this)
@@ -149,20 +150,71 @@ class Students extends React.Component {
   }
   _select(person) {
     const self = this
+    log('selecting ', person )
     self.props.selectViewPerson(person)
     postViewPersonId(self.props.user.uid, person.key)
-    const viewPersonId = person.key
-
-
     setTimeout(browserHistory.push("/dashboard"), 100)
   }
 
+  _selectMe(personId) {
+    const self = this
+    self.props.selectMe()
+    postViewPersonId(self.props.user.uid,self.props.personId )
+    setTimeout(browserHistory.push("/dashboard"), 100)
+  }
   _invite(person) {
-    console.log('inviting ...',person, person.val(), person.key )
     this.setState({
       setupInvite: person.key
     })
   }
+
+  _myCard(personId, person, select ) {
+    return (
+      <div key={"meme"} className="row">
+        <div className="col-xs-6 col-md-4">
+          <img src={person.picURL || "/img/generic.jpg"} alt={person.name || person.displayName || person.email }
+            title={person.name || person.displayName || person.email } style={{width:"40px"}}
+            onClick={ e => select(personId) }
+          />
+        </div>
+        <div className="col-xs-6 col-md-4">
+          <a href='#' onClick={e => select(person) }>{person.name || person.displayName || person.email }</a>
+        </div>
+        <hr/>
+        <br/>
+      </div>
+    )
+  }
+  _card(index,myRole, person, select, invite ) {
+    if(!person) {
+      return null
+    }
+    return (
+      <div key={index} className="row">
+        <div className="col-xs-6 col-md-4">
+          <img src={person.picURL || "/img/generic.jpg"} alt={person.name || person.displayName || person.email }
+            title={person.name || person.displayName || person.email } style={{width:"40px"}}
+            onClick={ e => select(person) }
+          />
+        </div>
+        <div className="col-xs-6 col-md-4">
+          <a href='#' onClick={e => select(person) }>{person.name || person.displayName || person.email }</a>
+        </div>
+        {
+          myRole=="parent" &&
+          <div className="col-xs-6 col-md-4">
+            <button type="button" className="btn btn-default" onClick={ e=> invite(person)} >
+              <i className="fa fa-share-alt"> invite </i>
+            </button>
+          </div>
+        }
+        <hr/>
+        <br/>
+      </div>
+
+    )
+  }
+
   _calcInviteKey(person, role) {
     const self = this
     console.log('the role ', role, ' for key', person.key)
@@ -206,12 +258,6 @@ class Students extends React.Component {
         acceptedOn: 0
       }
     database.ref().update(updates);
-
-            // updates['/people/' + personId + '/isSuperAdmin'] = true;
-            // updates['/people/' + personId + '/isBDFL'] = true;
-            //
-
-
   }
   _selectPic(e) {
     const self = this
@@ -254,141 +300,58 @@ class Students extends React.Component {
       console.log(x)
     }
   }
-  componentWillUnmount() {
-    const self = this
-    try {
-      database
-      .ref("people/" + self.props.personId + "/friends")
-      .off()
-    } catch(x) {console.log(x)}
-  }
-  componentDidMount() {
-    const self = this
-    try {
-      let people = []
 
-      self.setState({people:people})
-
-      var uid = self.props.user.uid;
-      if (uid && self.props.personId) {
-        console.log('getting my people... ',self.props, self.props.personId)
-
-        database
-        .ref("people/" + self.props.personId + "/friends")
-        .on('child_added',
-          child => {
-            console.log('retrieved child: ', child, child.key, child.val())
-            if (child.val().myRole) {
-              let myRole = child.val().myRole
-              database
-              .ref("people/" + child.val().personId)
-              .on('value',
-                data => {
-                  // this may not look correct, but it is, otherwise the react state is not going to be correct
-                  // as the events will use the prior copy of the state before it had a chance to update.
-                  if (data && data.val()) {
-                    people.push({
-                      myRole: myRole,
-                      friend: data
-                    })
-                    self.setState({people: people })
-                  }
-                }
-              )
-            }
-
-          }
-        )
-
-      } else {
-        console.log('no uid in ', self.props )
-      }
-
-    } catch(x) {
-      console.log(x)
-    }
-
-  }
 
 
   render() {
+    const self = this
     return <div className="container">
       <ReactSwipe className="carousel" swipeOptions={this.swipeOptions} ref={e=>this._reactSwipe = e }>
 
-
         <div>
           <h2>People</h2>
+          {
+            this._myCard(self.props.personId, self.props.person, this._selectMe )
+          }
           <br/>
               {
-                this.state.people &&
-                this.state.people.map((p, index) => {
-                if(p && p.friend ) {
-                  const myRole = p.myRole
-                  const person = p.friend
-                  if (person.val()) {
-                    if(this.state.setupInvite && this.state.setupInvite==person.key) {
-                      return <div key={index} className="row">
-                        <div className="col-xs-12">
-                            <div>
-                              <p>
-                                Please select an access role for the invitee
-                              </p>
-                              <div className="form-group">
-                                <label htmlFor="role">Role</label>
-                                  <select onChange={e=>this.role=e.target.value} className="form-control" id="role" name="role">
-                                    <option value="">(Please Select)</option>
-                                    <option value="parent">Parent</option>
-                                    <option value="teacher">Teacher</option>
-                                    <option value="therapist">Therapist</option>
-                                  </select>
-                              </div>
+                self.props.friends &&
+                self.props.friends.map((person, index) => {
+                const myRole = person.myRole
+                if(this.state.setupInvite && this.state.setupInvite==person.key) {
+                  return <div key={index} className="row">
+                    <div className="col-xs-12">
+                        <div>
+                          <p>
+                            Please select an access role for the invitee
+                          </p>
+                          <div className="form-group">
+                            <label htmlFor="role">Role</label>
+                              <select onChange={e=>this.role=e.target.value} className="form-control" id="role" name="role">
+                                <option value="">(Please Select)</option>
+                                <option value="parent">Parent</option>
+                                <option value="teacher">Teacher</option>
+                                <option value="therapist">Therapist</option>
+                              </select>
+                          </div>
 
-                              <br/>
-                              <button type="button" className="btn btn-primary"
-                                onClick={ e=> this._calcInviteKey(person, this.role)}>
-                                Invite
-                              </button>
-                              <br/>
-                              {
-                                this.state.alert &&
-                                <div className="alert">
-                                  {this.state.alert}
-                                </div>
-                              }
+                          <br/>
+                          <button type="button" className="btn btn-primary"
+                            onClick={ e=> this._calcInviteKey(person, this.role)}>
+                            Invite
+                          </button>
+                          <br/>
+                          {
+                            this.state.alert &&
+                            <div className="alert">
+                              {this.state.alert}
                             </div>
+                          }
                         </div>
-                      </div>
-                    } else {
-                      return  <div key={index} className="row">
-                                <div className="col-xs-6 col-md-4">
-                                  <img src={person.val().picURL || "/img/generic.jpg"} alt={person.val().name}
-                                    title={person.val().name} style={{width:"55px"}}
-                                    onClick={ e => this._select(person) }
-                                  />
-                                </div>
-                                <div className="col-xs-6 col-md-4">
-                                  <a href='#' onClick={e => this._select(person) }>{person.val().name}</a>
-                                </div>
-                                {
-                                  myRole=="parent" &&
-                                  <div className="col-xs-6 col-md-4">
-                                    <button type="button" className="btn btn-default" onClick={ e=> this._invite(person)} >
-                                      <i className="fa fa-share-alt"> invite </i>
-                                    </button>
-
-                                  </div>
-                                }
-
-                                <hr/>
-                              </div>
-                    }
-
-                  } else {
-                    return null
-                  }
-
+                    </div>
+                  </div>
                 } else {
-                  return null
+                  return this._card(index,myRole, person, this._select, this._invite )
                 }
               })}
         </div>
@@ -439,13 +402,12 @@ class Students extends React.Component {
 }
 
 export default connect(
-  (state, ownProps) => {
-    return {
-      user: state.auth.user,
-      personId: state.auth.personId,
-      person : state.auth.person
-    }
-  },
+  (state, ownProps) => ({
+    user: state.auth.user,
+    personId: state.auth.personId,
+    person : state.auth.person || (state.auth.personId==state.auth.viewPersonId ? state.auth.viewPerson : null ),
+    friends: state.auth.friends
+  }),
   {
     onLogout: () => ({
       type:"logout", user: null, isAuthenticated: false, credentials: null
@@ -453,7 +415,8 @@ export default connect(
     selectViewPerson: (person) => ({
       type:"selectViewPerson",
       person: person
-    })
+    }),
+    selectMe: () => ({type:"selectMe"})
 
   }
 

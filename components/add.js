@@ -330,7 +330,6 @@ class Add extends React.Component {
         resetToState.behaviors[key].value=0
       })
 
-      console.log('resetting state to ',resetToState )
       self.setState(resetToState)
       self.preview.src=""
 

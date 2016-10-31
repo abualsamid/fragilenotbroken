@@ -7,6 +7,12 @@
         "uid",
         "ownerId"
       ]
+    },
+    "interventions": {
+      ".indexOn": ".value",
+      "$viewPersonId": {
+        ".indexOn": ".value"
+      }
     }
   }
 }
