@@ -14,6 +14,7 @@ const initialState = {
   list_behaviors: {},
   timeLine: {},
   interventions: {},
+  interventionModels: {},
   isLoading: false,
   friends: [],
   timestamp: 0
@@ -24,6 +25,7 @@ export default function auth(state = initialState, action) {
 
   switch(action.type) {
     case "login":
+      log('reducing login ', action )
       return  { ...state,
                 user: action.user,
                 isAuthenticated: action.isAuthenticated,
@@ -41,7 +43,6 @@ export default function auth(state = initialState, action) {
       let f = {...state.timeLine }
       if (action.entries && !action.key) {
         f[action.viewPersonId] = action.entries
-        log('loading timeline entries ', action.entries)
       }
       if (action.key && action.entry ) {
         f[action.viewPersonId][action.key] = action.entry
@@ -72,11 +73,17 @@ export default function auth(state = initialState, action) {
         ...state,
         interventions: i
       }
+    case "loadInterventionModels":
+      return { ...state, interventionModels: action.models }
+      break;
     case "auth":
       return { ...state, user: action.user, isAuthenticated: action.isAuthenticated}
     case "selectViewPerson":
-      return { ...state, viewPersonId: action.person.key, viewPerson: action.person}
+      log('reducing selectViewPerson ', action )
+
+      return { ...state, viewPersonId: action.viewPersonId, viewPerson: action.person, interventionModels: {}}
     case "selectMe":
+      log('reducing selectMe ', action )
       return { ...state, viewPersonId: state.personId, viewPerson: state.person }
     case "onListBehaviors":
       return { ...state, list_behaviors: action.list_behaviors}

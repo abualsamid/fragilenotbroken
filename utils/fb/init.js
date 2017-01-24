@@ -1,13 +1,13 @@
-import firebase from 'firebase';
+// import firebase from 'firebase';
+const firebase = require("firebase/app");
+require("firebase/auth");
+require("firebase/database");
+
 import log from '../log'
 import _ from 'lodash'
 // Initialize Firebase
-var config = {
-  apiKey: "AIzaSyAy4ypdtNBZPz9Cr0t8IUHSAwB8S4_sYoE",
-  authDomain: "fragilenotbroken-ccc45.firebaseapp.com",
-  databaseURL: "https://fragilenotbroken-ccc45.firebaseio.com",
-  storageBucket: "fragilenotbroken-ccc45.appspot.com",
-};
+const config = require("json-loader!./.secret.json")
+
 firebase.initializeApp(config);
 const database = firebase.database()
 
@@ -29,7 +29,7 @@ const onAuthenticated =  (user, credentials, personId, isSuperAdmin=false, isBDF
         isSuperAdmin: isSuperAdmin,
         isBDFL: isBDFL,
         viewPersonId: personId,
-        viewPerson: person
+        viewPerson: person.val?person.val():person
       }
     }
 
@@ -83,6 +83,7 @@ const _retrieveFBPerson = (store, user, cb) => {
                             .push(person)
                             .key
           _createFBUser(user.uid, personId, user.email )
+          log('Could not find person in db ', user, "", personId, false, false, person)
           store.dispatch(onAuthenticated(user, "", personId, false, false, person) )
           store.dispatch({type: "doneLoading"})
           cb(personId)
@@ -90,6 +91,7 @@ const _retrieveFBPerson = (store, user, cb) => {
           const personId = Object.keys(person)[0]
           const peep = person[personId]
           _createFBUser(user.uid, personId, user.email )
+          log('Authenticated ', personId, peep.isSuperAdmin, peep.isBDFL, peep)
           store.dispatch(onAuthenticated(user, "", personId, peep.isSuperAdmin, peep.isBDFL, peep))
           store.dispatch({type: "doneLoading"})
           _loadMyFriends(store, user.uid,personId, peep)
@@ -111,7 +113,7 @@ const _loadTimeline = (viewPersonId,cb) => {
       .database()
       .ref(root)
       .orderByKey()
-      .limitToLast(50)
+      .limitToLast(450)
       .once("value",cb)
     } catch(x) {
       console.log(x)
@@ -120,7 +122,6 @@ const _loadTimeline = (viewPersonId,cb) => {
 
 const _loadNewTimeLineEntry = (viewPersonId, keyId, cb) => {
   try {
-    log('in _loadNewTimeLineEntry ', viewPersonId, keyId )
     const root = `/people/${viewPersonId}/timeline`
     if (keyId) {
       firebase
@@ -160,15 +161,6 @@ const _loadInterventions = (viewPersonId,cb) => {
           }
           firebase.database().ref(root).orderByKey().startAt(lastKey).on("child_added",
             entry => cb(entry.key, entry.val()))
-
-          // if(lastKey) {
-          //   firebase.database().ref(root).orderByKey().startAt(lastKey).on("child_added",
-          //     entry => cb(entry.key, entry.val()))
-          // } else {
-          //   firebase.database().ref(root).orderByKey().on("child_added",
-          //     entry => cb(entry.key, entry.val()))
-          //
-          // }
         }
       )
     } catch(x) {
@@ -176,20 +168,36 @@ const _loadInterventions = (viewPersonId,cb) => {
     }
 }
 
-
+const _loadInterventionModels = (store, personId, viewPersonId) => {
+  const key=`/models/${viewPersonId}`
+  firebase
+  .database()
+  .ref(key)
+  .orderByChild("isDeleted")
+  .equalTo(false)
+  .once("value",
+    snapshot => {
+      if(snapshot && snapshot.val()) {
+        store.dispatch({
+            type:"loadInterventionModels",
+            models: snapshot.val(),
+        })
+      }
+    }
+  )
+}
 const _loadViewPerson = (store, personId, viewPersonId ) => {
   const key=`/people/${viewPersonId}`
-  log('loadPerson ', key )
   firebase
   .database()
   .ref(key)
   .once("value",
     snapshot => {
       if(snapshot && snapshot.val()) {
-        log('in init::_loadViewPerson, dispatching selectViewPerson ', snapshot, snapshot.val())
         store.dispatch({
             type:"selectViewPerson",
-            person: snapshot
+            person: snapshot.val(),
+            viewPersonId: viewPersonId
         })
       }
     }
@@ -201,7 +209,6 @@ const _loadMyFriends = (store, userId,myPersonId, person) => {
     _.each(person.friends, (value, key) => {
       const myRole = value.myRole
       const friendId = value.personId
-      log('loading friend ', myRole, friendId, key, value )
       database
       .ref(`/people/${friendId}`)
       .once("value",
@@ -228,6 +235,8 @@ const _loadMyFriends = (store, userId,myPersonId, person) => {
 }
 const _monitorTimeLine = (store, userId, myPersonId) => {
   const key=`/state/${userId}/viewPersonId`
+  log('Checking time line for ', key)
+
   let viewPersonId = ""
   firebase
   .database()
@@ -239,7 +248,10 @@ const _monitorTimeLine = (store, userId, myPersonId) => {
       } else {
         viewPersonId = myPersonId
       }
+      log('loading view Person ', myPersonId, viewPersonId)
       _loadViewPerson(store, myPersonId, viewPersonId)
+      _loadInterventionModels(store, myPersonId, viewPersonId)
+      log('loading timeline ')
       _loadTimeline(viewPersonId,
         timeLine => {
 
@@ -259,7 +271,6 @@ const _monitorTimeLine = (store, userId, myPersonId) => {
             _loadNewTimeLineEntry(viewPersonId, lastKeyId,
               newEntry => {
                 if (newEntry && newEntry.val() && newEntry.key !== lastKeyId) {
-                  console.log('loaded new entry ', newEntry.val())
                   store.dispatch({
                     type: "loadTimeLine",
                     viewPersonId: viewPersonId,
@@ -283,7 +294,6 @@ const _monitorTimeLine = (store, userId, myPersonId) => {
     })
 }
 export default (store) => {
-  console.log('in init, store is ', store )
   firebase.auth().onAuthStateChanged(
     (user) => {
       try {

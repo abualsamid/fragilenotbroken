@@ -10,7 +10,7 @@ import reducers from './reducers'
 import Routes from './routes/'
 import init from './utils/fb/init'
 
-const persistedState = loadState();
+// const persistedState = loadState();
 
 // Add the reducer to your store on the `routing` key
 const store = createStore(

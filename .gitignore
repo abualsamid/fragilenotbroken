@@ -65,3 +65,7 @@ coverage
 dist/
 
 .database_backups
+
+database.rules.json
+firebase.json
+.secret.json

@@ -1,3 +1,5 @@
+const firebase = require("firebase/app");
+
 import React from 'react';
 import log from '../utils/log'
 

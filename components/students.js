@@ -150,7 +150,6 @@ class Students extends React.Component {
   }
   _select(person) {
     const self = this
-    log('selecting ', person )
     self.props.selectViewPerson(person)
     postViewPersonId(self.props.user.uid, person.key)
     setTimeout(browserHistory.push("/dashboard"), 100)
@@ -174,13 +173,15 @@ class Students extends React.Component {
         <div className="col-xs-6 col-md-4">
           <img src={person.picURL || "/img/generic.jpg"} alt={person.name || person.displayName || person.email }
             title={person.name || person.displayName || person.email } style={{width:"40px"}}
-            onClick={ e => select(personId) }
+            onClick={ e => select(person) }
           />
         </div>
         <div className="col-xs-6 col-md-4">
-          <a href='#' onClick={e => select(person) }>{person.name || person.displayName || person.email }</a>
+          <a href='#' onClick={e => select(person) }>
+            {person.name || person.displayName || person.email }
+            <strong> (myself) </strong>
+          </a>
         </div>
-        <hr/>
         <br/>
       </div>
     )

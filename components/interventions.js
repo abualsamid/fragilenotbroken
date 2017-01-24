@@ -1,6 +1,10 @@
 import React from 'react';
 import { connect } from 'react-redux'
 import {speak} from '../utils/speak'
+import map from 'lodash/map'
+
+import { MediaPreview } from './MediaPreview'
+
 
 class VisualModel extends React.Component{
   constructor(props) {
@@ -28,7 +32,19 @@ class VisualModel extends React.Component{
 
         </div>
         <br/>
-
+        {
+          self.props.interventionModels &&
+          map(self.props.interventionModels,
+            m => (
+              <div>
+                <strong>{m.caption}</strong>
+                <br/>
+                <MediaPreview src={m.url}  />
+                <br/>
+              </div>
+            )
+          )
+        }
         {
           <div>
             <div className="form-group">
@@ -68,7 +84,8 @@ export default connect(
     return {
       user: state.auth.user,
       viewPersonId: state.auth.viewPersonId,
-      viewPerson: state.auth.viewPerson
+      viewPerson: state.auth.viewPerson,
+      interventionModels: state.auth.interventionModels
     }
   }
 

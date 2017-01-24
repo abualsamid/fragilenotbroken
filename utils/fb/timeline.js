@@ -1,6 +1,28 @@
 import {getDate} from './index'
 import log from '../log'
 
+export const getMediaModels = (viewPersonId) => {
+  const root = `/models/${viewPersonId}`
+
+  return  firebase 
+          .database()
+          .ref(root)
+          .once("value")
+}
+export const addMedialModel = (uid, viewPersonId, timeLineId,caption,  url) => {
+  const root =`/models/${viewPersonId}/${timeLineId}`
+
+  return firebase
+  .database()
+  .ref(root)
+  .set({
+    url: url,
+    caption: caption,
+    uid: uid,
+    isDeleted: false,
+    timestamp: firebase.database.ServerValue.TIMESTAMP
+  })
+}
 export const submitInterventionResponse = (viewPersonId, timeLineId, response) => {
   const root = `/interventions/${viewPersonId}/${timeLineId}`
   firebase

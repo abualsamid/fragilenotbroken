@@ -6,30 +6,31 @@ import {  submitInterventionResponse } from '../utils/fb/timeline'
 import  log  from '../utils/log'
 import Intervention from './interventions'
 import { getTodaysRed } from '../utils/fb/timeline'
-
+import { getMediaModels } from '../utils/fb/timeline'
+import { MediaPreview } from './MediaPreview'
 const SECOND = 1000
 const MINUTE = 60*SECOND
 const HOUR = 60*MINUTE
 const DAY = 24*HOUR
 
-const Media = ({src}) => {
-  const u= src.split('?')[0]
-  switch(u.split('.').pop().toLowerCase()) {
-    case "mov":
-      return (
-        <div>
-          <video controls="controls" src={src} style={{maxWidth: "50%"}} />
-        </div>
-      )
-    default:
-      return (
-        <div>
-          <img src={src} style={{maxWidth: "50%"}} />
-        </div>
-      )
-
-  }
-}
+// const Media = ({src}) => {
+//   const u= src.split('?')[0]
+//   switch(u.split('.').pop().toLowerCase()) {
+//     case "mov":
+//       return (
+//         <div>
+//           <video controls="controls" src={src} style={{maxWidth: "50%"}} />
+//         </div>
+//       )
+//     default:
+//       return (
+//         <div>
+//           <img src={src} style={{maxWidth: "50%"}} />
+//         </div>
+//       )
+//
+//   }
+// }
 
 const Behavior = b => (
   <div>
@@ -56,6 +57,19 @@ const Behavior = b => (
     }
   </div>
 )
+
+const hasRedBehavior = b => {
+  if(!b) {
+    return false
+  }
+  let v = false
+  _.forEach(b, (value, key) => {
+    if (value.value<0) {
+      v = true
+    }
+  })
+  return v
+}
 
 const InterventionResult = i => {
   if (!i) {
@@ -131,13 +145,7 @@ class TimeLine extends React.Component {
     }
 
   }
-  componentWillReceiveProps() {
-    log('timeline: componentWillReceiveProps')
-  }
-  componentDidMount() {
-    log('timeline: componentDidMount')
 
-  }
   render() {
     const self = this
     function mood(m) {
@@ -155,7 +163,6 @@ class TimeLine extends React.Component {
     if(!this.props.timeLine) {
       return <div>.</div>
     }
-    log('rendering timeline ')
     return (
       <div>
         {
@@ -176,6 +183,9 @@ class TimeLine extends React.Component {
                       <div className="col-xs-9 col-md-11">
                         <div>
                           { e.postedByDisplayName || ""}
+                          { }
+                          &nbsp;
+                          {one}
                         </div>
                         <div>
                           <span style={{fontSize:"small", fontWeight:"light"}}>
@@ -200,7 +210,7 @@ class TimeLine extends React.Component {
                       <div className="col-xs-12 col-md-12">
                         {
                           e.mediaURL &&
-                            <Media src={e.mediaURL} />
+                            <MediaPreview src={e.mediaURL} type={e.mediaFileType} />
                         }
                       </div>
                     </div>
@@ -211,6 +221,8 @@ class TimeLine extends React.Component {
                     </div>
                     <hr style={{color:"black", borderTop: "1px solid black"}}/>
                     {
+                      hasRedBehavior(e.behaviors)
+                      &&
                       DisplayInterventions(self.props.viewPersonId, one, this.state.interventionKey,this.state.red, e.date,this._selectIntervention)
                     }
 
@@ -240,7 +252,7 @@ export default connect(
       viewPerson: state.auth.viewPerson,
       timeLine: state.auth.timeLine[state.auth.viewPersonId],
       interventions: state.auth.interventions[state.auth.viewPersonId] || {},
-      timestamp: state.auth.timestamp 
+      timestamp: state.auth.timestamp
     }
   }
 )(TimeLine)

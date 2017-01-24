@@ -4,7 +4,10 @@ import log from '../utils/log'
 import behaviors, {redStyle, greenStyle, redStyleSelected, greenStyleSelected} from './behaviors'
 import subjects from './subjects'
 import {inc, incAll, incYear, incMonth, incDate, incWeek} from '../utils/fb/'
+import { addMedialModel } from '../utils/fb/timeline'
 import AddBehavior from './addBehavior'
+import { MediaPreview } from './MediaPreview'
+const firebase = require("firebase/app");
 
 
 class Add extends React.Component {
@@ -50,7 +53,11 @@ class Add extends React.Component {
      message: "",
      list_activity: [],
      activityId: "",
-     activityTimeStamp: this._pad(d.getHours()) + ":" + this._pad(d.getMinutes())
+     activityTimeStamp: this._pad(d.getHours()) + ":" + this._pad(d.getMinutes()),
+     previewSrc: "",
+     previewType: "",
+     statusMessage: "",
+     statusClass: ""
    }
   }
 
@@ -65,6 +72,7 @@ class Add extends React.Component {
     this._loadData=this._loadData.bind(this)
     this.state=this._initialState(props)
     this._postButtonCaption = this._postButtonCaption.bind(this)
+    this.isModel = false
   }
 
   componentDidMount() {
@@ -98,17 +106,36 @@ class Add extends React.Component {
   _previewFile() {
     const self = this
     try {
-      var reader = new FileReader();
-      reader.onload = function (e) {
-          // get loaded data and render thumbnail.
-          self.preview.src = e.target.result;
-      };
-
-      // read the image file as a data URL.
-      reader.readAsDataURL(self.file.files[0]);
-    } catch(x) {console.log('previewFile: ', x)}
-
+      const file = self.file.files[0]
+      const type = file.type
+      const URL = window.URL || window.webkitURL
+      const fileURL =  URL.createObjectURL(file)
+      log('previewing fileurl: ', fileURL, ' file type is ', type )
+      self.setState({
+        previewSrc: fileURL,
+        previewType: type
+      })
+    } catch(x) {
+      console.log(x)
+    }
   }
+
+  // _previewFile() {
+  //   const self = this
+  //   try {
+  //     var reader = new FileReader();
+  //     reader.onload = function (e) {
+  //         // get loaded data and render thumbnail.
+  //         self.preview.src = e.target.result;
+  //         self._mediaPreview.src = e.target.result;
+  //     };
+  //
+  //     // read the image file as a data URL.
+  //     reader.readAsDataURL(self.file.files[0]);
+  //   } catch(x) {console.log('previewFile: ', x)}
+  //
+  // }
+
   _selectBehavior(key, direction) {
     const self = this
     let news = Object.assign({}, self.state.behaviors)
@@ -122,7 +149,7 @@ class Add extends React.Component {
 
   }
 
-  _pushUpdates(key, newKey, message, mood, mediaURL, postedByPersonId,postedByDisplayName,photoURL, activityId) {
+  _pushUpdates(key, newKey, message, mood, mediaURL, postedByPersonId,postedByDisplayName,photoURL, activityId, mediaFileType) {
     const self = this
     let hasTimeStamp = false
     let timeStamp = new Date()
@@ -144,7 +171,6 @@ class Add extends React.Component {
             return previous
           },"" )
 
-          console.log('setting activity ', activity)
           if(message) {
             message = activity + ". " + message
           } else {
@@ -164,6 +190,7 @@ class Add extends React.Component {
           mood: mood,
           behaviors: self.state.behaviors,
           mediaURL: mediaURL || "",
+          mediaFileType: mediaFileType || "",
           postedByPersonId: postedByPersonId,
           postedByDisplayName: postedByDisplayName,
           postedByPhotoURL: self.props.photoURL || "",
@@ -180,6 +207,7 @@ class Add extends React.Component {
             mood: mood,
             behaviors: self.state.behaviors,
             mediaURL: mediaURL ||"",
+            mediaFileType: mediaFileType || "",
             postedByPersonId: postedByPersonId,
             postedByDisplayName: postedByDisplayName
           }
@@ -198,6 +226,7 @@ class Add extends React.Component {
                 mood: mood,
                 behavior: behavior,
                 mediaURL: mediaURL || "",
+                mediaFileType: mediaFileType || "",
                 postedByPersonId: postedByPersonId,
                 postedByDisplayName: postedByDisplayName
 
@@ -211,6 +240,10 @@ class Add extends React.Component {
       .database()
       .ref()
       .update(updates)
+      .then( e => {
+        self.setState({statusMessage: " Posted to server...", statusClass: "alert alert-success"})
+
+      })
 
       try {
         // clear out the form
@@ -222,6 +255,8 @@ class Add extends React.Component {
   }
   _add() {
     const self = this
+    self.setState({statusMessage: " committing updates to server.", statusClass: "alert alert-info"})
+
     let mood = 0
     let behavior = 0
     let mediaURL = ""
@@ -236,6 +271,41 @@ class Add extends React.Component {
       }
     )
 
+    // do we have anything?
+    let hasSomething = message || mood || self.state.activityId|| (this.file && this.file.files && this.file.files.length)
+
+    if(hasSomething) {
+      log('has ... ', message, mood, self.state.activityId, this.file, this.file.files )
+    }
+    if(!hasSomething) {
+      log('no message, no mood, no activityId, no file  ')
+      Object.keys(this.state.behaviors).map(key => {
+        if(!hasSomething) {
+          let behavior = this.state.behaviors[key]
+          if (behavior.value!==0) {
+            log('has behavior ', behavior )
+            hasSomething=true
+          }
+        }
+      })
+    }
+
+    if(!hasSomething) {
+      log('no behaviors, checking subjects ')
+      this.state.subjects.map(
+        (subject,i) => {
+          const o = subject.options
+          o.map(
+            (option, j) => { hasSomething=hasSomething || option.checked }
+          )
+        }
+      )
+    }
+
+    if(!hasSomething) {
+      self.setState({statusMessage: " empty update not posted to server.", statusClass: "alert alert-warning"})
+      return; // do not post empty message
+    }
 
     const newKey = firebase
     .database()
@@ -259,8 +329,19 @@ class Add extends React.Component {
             console.log(snapshot.metadata);
             var url = snapshot.metadata.downloadURLs[0];
             self._pushUpdates(self.props.viewPersonId, newKey,message || "" , mood,  url,
-            self.props.personId, self.props.displayName, self.props.photoURL, self.state.activityId)
+            self.props.personId, self.props.displayName, self.props.photoURL, self.state.activityId, file.type)
             console.log('File available at', url);
+            if(self.isModel) {
+              addMedialModel(self.props.user.uid, self.props.viewPersonId, newKey, message,  url)
+              .then(
+                e => {
+                  // log('added media model and received ', e)
+                  self.setState({statusMessage: " uploaded media to server.", statusClass: "alert alert-success"})
+                }
+              )
+            }
+
+
           })
           .catch(function(error) {
             // [START onfailure]
@@ -269,7 +350,7 @@ class Add extends React.Component {
           });
       } else {
         self._pushUpdates(this.props.viewPersonId, newKey,message || "" , mood, "",
-        self.props.personId, self.props.displayName, self.props.photoURL, self.state.activityId)
+        self.props.personId, self.props.displayName, self.props.photoURL, self.state.activityId,"")
 
       }
     } catch(x) {
@@ -331,7 +412,6 @@ class Add extends React.Component {
       })
 
       self.setState(resetToState)
-      self.preview.src=""
 
     } catch(x) {console.log(x)}
 
@@ -390,6 +470,7 @@ class Add extends React.Component {
   // }
 
   render() {
+    const self = this
     return (
       <div style={{ backgroundColor: "white", padding:"2em" }}>
         <form onSubmit={(e)=> {e.preventDefault(); return false;}}>
@@ -472,17 +553,21 @@ class Add extends React.Component {
                   )
                 }
             </div>
-          <div className="form-group">
-            <label>photo/video</label>
+          <div className="input-group">
             <label htmlFor="upload" className="form-control">
               <i className="fa fa-camera" aria-hidden="true"></i>
-              <input type="file"  id="upload" style={{display:"none"}}
+            </label>
+            <input type="file"  id="upload" style={{display:"none"}}
                 onChange={this._previewFile}
                 ref={e=>this.file = e}/>
-            </label>
+            <span className="input-group-addon"><input type='checkbox'
+              onChange={e => this.isModel = e.target.checked } defaultChecked={this.isModel}
+              /> Model </span>
           </div>
           <div className="form-group">
-            <img  style={{width:"200px"}} ref={(e)=>{this.preview = e}} />
+            {
+                <MediaPreview type={this.state.previewType} src={this.state.previewSrc} ref={(e)=>{this._mediaPreview = e}} />
+            }
           </div>
           <div>
             <button className="btn-block btn btn-primary" onClick={this._add}>
@@ -492,6 +577,14 @@ class Add extends React.Component {
             </button>
             <br/>
           </div>
+          {
+            self.state.statusMessage
+            &&
+            <div className={self.state.statusClass} role="alert">
+              <span className="glyphicon glyphicon-exclamation-sign" aria-hidden="true"> &nbsp; </span>
+              { self.state.statusMessage }
+            </div>
+          }
         </form>
       </div>
     )

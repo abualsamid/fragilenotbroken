@@ -13,6 +13,12 @@
       "$viewPersonId": {
         ".indexOn": ".value"
       }
+    },
+    "models": {
+      ".indexOn": ".value",
+      "$viewPersonId": {
+        ".indexOn": "isDeleted"
+      }
     }
   }
 }

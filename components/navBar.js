@@ -11,6 +11,7 @@ class Nav extends React.Component {
   }
   render() {
     const self = this
+    log('in navbar render: ', this.props)
     return (
       <nav className="navbar navbar-default navbar-fixed-top">
         <div className="container">

@@ -14,14 +14,11 @@ class D extends React.Component {
       green: 0,
       red: 0,
       filter: "date/" + getDate(),
-      allStats : {}
+      allStats : {},
+      isLoading: true
     }
 
-    try {
-      log('inside Dashboard constructor')
-    } catch(x) {
-      console.error(x)
-    }
+
   }
 
   _speak(msg) {
@@ -41,40 +38,26 @@ class D extends React.Component {
   _filterChanged(filter="all") {
     const self = this
     if(self.props && self.props.viewPerson && self.props.viewPersonId) {
-      console.log('in _filter changed ', filter )
       self.setState({filter})
       setTimeout(this.do, 250)
-
-    }
-
-
-  }
-  componentWillUnmount() {
-    try {
-      firebase
-      .database()
-      .ref("/people/" + this.props.viewPersonId + "/stats/behaviors")
-      .off()
-    } catch(x) {
-      console.log(x)
     }
   }
   componentDidMount() {
     const self = this
-    self.behaviorChart = new google.visualization.ColumnChart(document.getElementById('behaviorChart'));
-    self.pieChart = new google.visualization.PieChart(document.getElementById("pieChart"))
     try {
         firebase
         .database()
         .ref("/people/" + this.props.viewPersonId + "/stats/behaviors")
-        .on("value",
+        .once("value",
           value => {
             if (value && value.val()) {
               let allStats = value.val()
-              console.log('got allStats back ', allStats)
               allStats["green"] = allStats["green"] || {}
               allStats["red"] = allStats["red"] || {}
-              self.setState({allStats})
+              const isLoading = false
+              self.behaviorChart = new google.visualization.ColumnChart(document.getElementById('behaviorChart'));
+              self.pieChart = new google.visualization.PieChart(document.getElementById("pieChart"))
+              self.setState({allStats, isLoading})
               self._filterChanged( "date/" + getDate())
             }
           }
@@ -151,9 +134,21 @@ class D extends React.Component {
   }
 
   render() {
+
+
+
     return (
       <div style={{backgroundColor:"white", height:"100%", minHeight:"100%", padding: "1em"}}>
         <h3>Behaviors</h3>
+          {
+
+            this.state.isLoading
+            &&
+              <div>
+                <h3>loading ... </h3>
+              </div>
+          }
+
         <div className="form-group">
           <select className="form-control" value={this.state.filter}
             onChange={e=> this._filterChanged(e.target.value) }>

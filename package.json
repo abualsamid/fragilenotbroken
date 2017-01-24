@@ -8,7 +8,8 @@
     "autoprefixer-core": "^6.0.1",
     "css-loader": "^0.25.0",
     "extract-text-webpack-plugin": "^1.0.1",
-    "firebase": "^3.2.1",
+    "firebase": "^3.6.2",
+    "json-loader": "^0.5.4",
     "lodash": "^4.15.0",
     "postcss-loader": "^0.13.0",
     "react": "^15.3.0",
@@ -22,7 +23,8 @@
     "redux": "^3.5.2",
     "redux-saga": "^0.12.0",
     "style-loader": "^0.13.1",
-    "swipe-js-iso": "^2.0.3"
+    "swipe-js-iso": "^2.0.3",
+    "webpack": "^1.13.3"
   },
   "devDependencies": {
     "babel-core": "^6.13.2",
@@ -42,7 +44,11 @@
     "start": "NODE_ENV=development webpack-dev-server --host 0.0.0.0 --hot --inline --content-base dist --history-api-fallback --colors --port 2345 --watch",
     "build": "NODE_ENV=production webpack --progress --colors",
     "deploy": "npm run build && firebase deploy",
-    "backup": "firebase  database:get / | python -m json.tool > .database_backups/backup.json"
+    "backup": "firebase  database:get / | python -m json.tool > .database_backups/backup.json",
+    "timeline_results": "firebase database:get --pretty /people/-KPnhhlCqO8pzmmpEHAY/timeline > analytics/data.json",
+    "intervention_results": "firebase database:get --pretty /interventions/-KPnhhlCqO8pzmmpEHAY > analytics/interventions.json",
+    "results": "yarn run intervention_results && yarn run timeline_results",
+    "view": "cd analytics && node view"
   },
   "keywords": [],
   "author": "",

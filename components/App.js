@@ -8,6 +8,8 @@ import {  browserHistory, Link } from 'react-router';
 import log from '../utils/log'
 
 // Get a reference to the database service
+const firebase = require('firebase/app')
+
 var database = firebase.database();
 
 var uid ;
